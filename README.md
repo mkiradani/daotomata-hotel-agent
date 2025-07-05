@@ -1,6 +1,16 @@
-# 🤖 Hotel Bot API - AI Concierge Service
+# 🤖 Daotomata Hotel Agent - AI Concierge Service
 
 A sophisticated AI concierge system for hotels built with OpenAI Agents SDK and FastAPI. This service provides specialized agents for different hotel operations including booking, concierge services, guest services, and activities coordination.
+
+> **Note**: This repository was extracted from the main [dao-hotel monorepo](https://github.com/mkiradani/dao-hotel) to create a standalone, focused service for the hotel AI agent functionality.
+
+## 🏆 Features
+
+- **Multi-Agent Architecture**: Intelligent triage system with specialized agents
+- **OpenAI Integration**: Powered by GPT-4o for natural conversations
+- **Multi-Tenant Support**: Designed for multiple hotel properties
+- **Real-time Communication**: Fast, async API responses
+- **Extensible Tools**: Custom tools for hotel operations
 
 ## 🏗️ Architecture
 
@@ -299,6 +309,28 @@ The application logs important events and errors. In production, configure struc
 3. Update documentation
 4. Ensure all agents work with the multi-tenant system
 
-## 📄 License
+## 📝 License
 
-Part of the DAO Hotel Multi-Tenant System - MIT License
+MIT License - Originally part of the DAO Hotel Multi-Tenant System
+
+## 🔗 Related Repositories
+
+- **[dao-hotel](https://github.com/mkiradani/dao-hotel)**: Main hotel management system (parent repository)
+- **[daotomata-stack](https://github.com/mkiradani/daotomata-stack)**: Complete infrastructure stack
+
+## 📜 Migration Notes
+
+This service was extracted from the main dao-hotel monorepo to:
+
+1. **Improve maintainability**: Focused development on AI agent functionality
+2. **Enable independent deployment**: Deploy and scale the AI service separately
+3. **Facilitate collaboration**: Specialized team can work on AI features
+4. **Simplify CI/CD**: Faster build and deployment cycles
+
+### Integration with Main System
+
+This service integrates with the main hotel system through:
+
+- **Supabase Database**: Shared multi-tenant database
+- **REST API**: Standardized endpoints for hotel operations
+- **Environment Configuration**: Common configuration patterns

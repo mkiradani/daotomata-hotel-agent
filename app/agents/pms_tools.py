@@ -44,6 +44,44 @@ except ImportError as e:
     tenant_manager = None
 
 
+def build_cloudbeds_url(
+    hotel_id: str, 
+    check_in: str, 
+    check_out: str, 
+    adults: int = 1, 
+    children: int = 0, 
+    currency: str = "eur"
+) -> str:
+    """Build Cloudbeds URL for hotel reservations redirect.
+    
+    Args:
+        hotel_id: The Cloudbeds hotel ID
+        check_in: Check-in date in YYYY-MM-DD format
+        check_out: Check-out date in YYYY-MM-DD format
+        adults: Number of adult guests
+        children: Number of children
+        currency: Currency code (default: eur)
+    
+    Returns:
+        str: Cloudbeds URL for direct booking
+    """
+    base_url = "https://hotels.cloudbeds.com/en/reservas"
+    
+    # Build query parameters
+    params = {
+        "checkin": check_in,
+        "checkout": check_out,
+        "adults": str(adults),
+        "kids": str(children),
+        "currency": currency.lower()
+    }
+    
+    # Convert params to query string
+    query_string = "&".join([f"{key}={value}" for key, value in params.items()])
+    
+    return f"{base_url}/{hotel_id}?{query_string}"
+
+
 async def get_pms_client(hotel_id: str):
     """Get PMS client for a specific hotel"""
     if not PMS_AVAILABLE:
@@ -230,7 +268,7 @@ async def create_reservation(
     special_requests: Optional[str] = None,
     hotel_id: Optional[str] = None,
 ) -> str:
-    """Create a new reservation using Cloudbeds PMS.
+    """Create a new reservation using Cloudbeds URL redirect.
 
     Args:
         check_in: Check-in date in YYYY-MM-DD format
@@ -245,33 +283,19 @@ async def create_reservation(
         special_requests: Any special requests
         hotel_id: The hotel ID. If not provided, uses the current hotel context.
     """
-    if not PMS_AVAILABLE:
-        return f"""**Reservation Request**
-
-I apologize, but the PMS (Property Management System) integration is currently not available for creating reservations.
-
-**Your Reservation Details:**
-- Guest: {guest_first_name} {guest_last_name}
-- Email: {guest_email}
-- Phone: {guest_phone}
-- Check-in: {check_in}
-- Check-out: {check_out}
-- Guests: {adults} adults{f', {children} children' if children > 0 else ''}
-- Room Type ID: {room_type_id}
-{f'- Special Requests: {special_requests}' if special_requests else ''}
-
-**To complete your reservation:**
-Please contact the hotel directly:
-- Call the front desk for immediate assistance
-- Visit our website for online booking
-- Email us with your reservation details
-
-We apologize for any inconvenience and look forward to welcoming you!"""
-
     try:
-        # Parse dates
+        # Parse dates to validate format
         check_in_date = datetime.strptime(check_in, "%Y-%m-%d").date()
         check_out_date = datetime.strptime(check_out, "%Y-%m-%d").date()
+
+        # Validate dates
+        if check_in_date <= date.today():
+            return "Check-in date must be in the future."
+
+        if check_out_date <= check_in_date:
+            return "Check-out date must be after check-in date."
+
+        nights = (check_out_date - check_in_date).days
 
         # Use hotel_id from context if not provided
         if not hotel_id and hasattr(ctx.context, "hotel_id"):
@@ -280,93 +304,47 @@ We apologize for any inconvenience and look forward to welcoming you!"""
         if not hotel_id:
             return "Hotel ID not available in context."
 
-        # Get PMS client
-        client = await get_pms_client(hotel_id)
-        if not client:
-            return "PMS integration not configured for this hotel."
+        # Build the Cloudbeds URL for direct booking
+        booking_url = build_cloudbeds_url(
+            hotel_id=hotel_id,
+            check_in=check_in,
+            check_out=check_out,
+            adults=adults,
+            children=children,
+            currency="eur"
+        )
 
-        async with client:
-            # Get reservation service
-            reservation_service = ReservationService(client)
-            availability_service = AvailabilityService(client)
+        # Format response with booking URL
+        response = f"""**Complete Your Reservation**
 
-            # First check availability
-            availability_check = await availability_service.check_availability(
-                start_date=check_in_date,
-                end_date=check_out_date,
-                room_type_id=room_type_id,
-                rooms_needed=1,
-                adults=adults,
-                children=children,
-            )
+**Reservation Details:**
+- Guest: {guest_first_name} {guest_last_name}
+- Email: {guest_email}
+- Phone: {guest_phone}
+- Check-in: {check_in}
+- Check-out: {check_out}
+- Nights: {nights}
+- Guests: {adults} adults{f', {children} children' if children > 0 else ''}
+- Room Type ID: {room_type_id}
+{f'- Special Requests: {special_requests}' if special_requests else ''}
 
-            if not availability_check["available"]:
-                return (
-                    f"Room type {room_type_id} is not available for the selected dates."
-                )
+**To complete your booking, please visit:**
+{booking_url}
 
-            # Create guest object
-            guest = Guest(
-                first_name=guest_first_name,
-                last_name=guest_last_name,
-                email=guest_email,
-                phone=guest_phone,
-            )
+This secure link will take you directly to the hotel's booking system where you can:
+- Review room availability and rates
+- Complete your reservation
+- Make secure payment
+- Receive instant confirmation
 
-            # Create room assignment
-            room = ReservationRoom(
-                room_type_id=room_type_id,
-                room_type_name="",  # Will be filled by PMS
-                adults=adults,
-                children=children,
-            )
+The booking system will pre-fill your selected dates and guest information. Thank you for choosing our hotel!"""
 
-            # Create reservation request
-            reservation_request = ReservationCreateRequest(
-                property_id=client.tenant_config.property_id,
-                check_in=check_in_date,
-                check_out=check_out_date,
-                primary_guest=guest,
-                rooms=[room],
-                special_requests=special_requests,
-                source="hotel_bot",
-            )
-
-            # Create the reservation
-            reservation = await reservation_service.create_reservation(
-                reservation_request
-            )
-
-            if reservation:
-                response = f"**Reservation Created Successfully!**\n\n"
-                response += f"Reservation ID: {reservation.reservation_id}\n"
-                response += (
-                    f"Confirmation Code: {reservation.confirmation_code or 'Pending'}\n"
-                )
-                response += f"Guest: {guest_first_name} {guest_last_name}\n"
-                response += f"Email: {guest_email}\n"
-                response += f"Check-in: {check_in}\n"
-                response += f"Check-out: {check_out}\n"
-                response += f"Nights: {reservation.nights}\n"
-                response += f"Guests: {adults} adults"
-                if children > 0:
-                    response += f", {children} children"
-                response += f"\nTotal Amount: {reservation.currency} {reservation.total_amount:.2f}\n"
-                response += f"Status: {reservation.status.value.title()}\n"
-
-                if special_requests:
-                    response += f"Special Requests: {special_requests}\n"
-
-                response += "\nThank you for your reservation!"
-
-                return response
-            else:
-                return "Failed to create reservation. Please try again or contact the hotel directly."
+        return response
 
     except ValueError:
         return "Invalid date format. Please use YYYY-MM-DD format."
     except Exception as e:
-        return f"Error creating reservation: {str(e)}"
+        return f"Error preparing reservation: {str(e)}"
 
 
 @function_tool

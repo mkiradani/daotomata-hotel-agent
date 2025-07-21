@@ -115,19 +115,11 @@ class ChatService:
             return None
 
         try:
-            from supabase import create_client
+            from .directus_service import directus_service
 
-            supabase = create_client(settings.supabase_url, settings.supabase_key)
-
-            response = (
-                supabase.table("hotels")
-                .select("id")
-                .eq("domain", settings.current_domain)
-                .execute()
-            )
-
-            if response.data:
-                return response.data[0]["id"]
+            hotel_data = await directus_service.get_hotel_by_domain(settings.current_domain)
+            if hotel_data:
+                return hotel_data.get("id")
         except Exception as e:
             print(f"Error detecting hotel from domain: {str(e)}")
 
@@ -136,16 +128,10 @@ class ChatService:
     async def _get_hotel_name(self, hotel_id: str) -> Optional[str]:
         """Get hotel name by ID."""
         try:
-            from supabase import create_client
+            from .directus_service import directus_service
 
-            supabase = create_client(settings.supabase_url, settings.supabase_key)
-
-            response = (
-                supabase.table("hotels").select("name").eq("id", hotel_id).execute()
-            )
-
-            if response.data:
-                return response.data[0]["name"]
+            hotel_name = await directus_service.get_hotel_name(hotel_id)
+            return hotel_name
         except Exception as e:
             print(f"Error getting hotel name: {str(e)}")
 

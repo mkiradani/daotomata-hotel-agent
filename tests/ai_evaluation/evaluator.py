@@ -207,7 +207,7 @@ Evaluate this hotel agent response for accuracy, helpfulness, and politeness.
 3. Politeness (0.0-1.0): Is the tone professional and courteous?
 4. Tool Usage: Are the tools used appropriately for the request?
 
-**Expected Response Format:**
+**Expected Response Format (JSON):**
 {{
     "accuracy_score": 0.85,
     "helpfulness_score": 0.90,
@@ -218,7 +218,7 @@ Evaluate this hotel agent response for accuracy, helpfulness, and politeness.
     "reasoning": "Brief explanation of the evaluation"
 }}
 
-Provide your evaluation:
+Provide your evaluation in JSON format:
 """
         
         try:
@@ -292,13 +292,13 @@ Evaluate the conversation flow and context maintenance in this hotel service int
 
 Rate the conversation flow from 0.0 (poor) to 1.0 (excellent).
 
-**Response Format:**
+**Response Format (JSON):**
 {{
     "flow_score": 0.85,
     "reasoning": "Brief explanation of the score"
 }}
 
-Provide your evaluation:
+Provide your evaluation in JSON format:
 """
         
         try:

@@ -14,6 +14,7 @@ from dotenv import load_dotenv
 from app.config import settings
 from app.api.chat import router as chat_router
 from app.api.hotel import router as hotel_router
+from app.api.webhook import router as webhook_router
 
 # Import PMS webhooks if available
 try:
@@ -96,6 +97,7 @@ app.add_middleware(
 # Include routers
 app.include_router(chat_router)
 app.include_router(hotel_router)
+app.include_router(webhook_router)
 
 # Include PMS webhooks if available
 if PMS_WEBHOOKS_AVAILABLE and webhooks_router:
@@ -118,7 +120,8 @@ async def root():
             "availability": "/api/hotel/availability",
             "activities": "/api/hotel/activities",
             "facilities": "/api/hotel/facilities",
-            "webhooks": "/webhooks" if PMS_WEBHOOKS_AVAILABLE else "Not available",
+            "chatwoot_webhook": "/webhook/chatwoot/{hotel_id}",
+            "pms_webhooks": "/webhooks" if PMS_WEBHOOKS_AVAILABLE else "Not available",
         },
         "pms_integration": {
             "enabled": PMS_WEBHOOKS_AVAILABLE,

@@ -4,7 +4,6 @@ import asyncio
 from datetime import datetime, date, timedelta
 from typing import List, Dict, Any, Optional
 from agents import function_tool, RunContextWrapper
-from supabase import create_client, Client
 
 from ..config import settings
 from ..models import (
@@ -14,10 +13,7 @@ from ..models import (
     FacilityInfo,
     HotelInfo,
 )
-
-
-# Initialize Supabase client
-supabase: Client = create_client(settings.supabase_url, settings.supabase_key)
+from ..services.directus_service import directus_service
 
 
 @function_tool
@@ -37,13 +33,11 @@ async def get_hotel_info(
         if not hotel_id:
             return "Hotel ID not available in context."
 
-        # Fetch hotel information from Supabase
-        response = supabase.table("hotels").select("*").eq("id", hotel_id).execute()
+        # Fetch hotel information from Directus
+        hotel_data = await directus_service.get_hotel_by_id(hotel_id)
 
-        if not response.data:
+        if not hotel_data:
             return f"Hotel with ID {hotel_id} not found."
-
-        hotel_data = response.data[0]
 
         # Format hotel information
         info = f"**{hotel_data['name']}**\n\n"
@@ -182,21 +176,15 @@ async def get_hotel_activities(
         if not hotel_id:
             return "Hotel ID not available in context."
 
-        # Fetch activities from Supabase
-        response = (
-            supabase.table("activities")
-            .select("*")
-            .eq("hotel_id", hotel_id)
-            .eq("is_active", True)
-            .execute()
-        )
+        # Fetch activities from Directus
+        activities = await directus_service.get_hotel_activities(hotel_id)
 
-        if not response.data:
+        if not activities:
             return "No activities found for this hotel."
 
         activities_text = "**Available Activities & Experiences**\n\n"
 
-        for activity in response.data:
+        for activity in activities:
             activities_text += f"**{activity['title']}**\n"
 
             if activity.get("description"):
@@ -240,23 +228,17 @@ async def get_hotel_facilities(
         if not hotel_id:
             return "Hotel ID not available in context."
 
-        # Fetch facilities from Supabase
-        response = (
-            supabase.table("facilities")
-            .select("*")
-            .eq("hotel_id", hotel_id)
-            .eq("is_active", True)
-            .execute()
-        )
+        # Fetch facilities from Directus
+        facilities = await directus_service.get_hotel_facilities(hotel_id)
 
-        if not response.data:
+        if not facilities:
             return "No facilities found for this hotel."
 
         facilities_text = "**Hotel Facilities & Amenities**\n\n"
 
         # Group facilities by category
         categories = {}
-        for facility in response.data:
+        for facility in facilities:
             category = facility.get("category", "General")
             if category not in categories:
                 categories[category] = []
@@ -284,15 +266,11 @@ async def _get_hotel_coordinates(hotel_id: str) -> Optional[tuple[float, float, 
         Tuple of (latitude, longitude, city_name) or None if not found
     """
     try:
-        # First try to get stored coordinates
-        response = supabase.table("hotels").select(
-            "latitude, longitude, address, name"
-        ).eq("id", hotel_id).execute()
+        # Get hotel coordinates from Directus
+        hotel_data = await directus_service.get_hotel_coordinates(hotel_id)
         
-        if not response.data:
+        if not hotel_data:
             return None
-            
-        hotel_data = response.data[0]
         
         # If we have stored coordinates, use them
         if hotel_data.get("latitude") and hotel_data.get("longitude"):
@@ -464,9 +442,8 @@ async def get_local_weather(
             # Fallback: try to get city from hotel if no coordinates
             if not city and hotel_id:
                 try:
-                    response = supabase.table("hotels").select("address, name").eq("id", hotel_id).execute()
-                    if response.data:
-                        hotel_data = response.data[0]
+                    hotel_data = await directus_service.get_hotel_coordinates(hotel_id)
+                    if hotel_data:
                         if hotel_data.get("address") and isinstance(hotel_data["address"], dict):
                             city = hotel_data["address"].get("city", hotel_data.get("name", "Hotel Location"))
                         else:
@@ -544,8 +521,8 @@ async def request_hotel_service(
                     "created_at": datetime.now().isoformat(),
                 }
                 
-                # In production, save to database:
-                # supabase.table("service_requests").insert(request_data).execute()
+                # Save service request to Directus
+                await directus_service.create_service_request(request_data)
         except Exception as e:
             print(f"Could not store service request in database: {e}")
 

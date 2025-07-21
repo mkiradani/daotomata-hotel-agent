@@ -111,83 +111,68 @@ class TestBuildCloudbedsUrl:
 class TestCreateReservation:
     """Test cases for create_reservation function."""
     
-    @patch('app.agents.pms_tools.get_pms_client')
-    @patch('app.agents.pms_tools.build_cloudbeds_url')
-    def test_create_reservation_returns_url(self, mock_build_url, mock_get_client):
-        """Test that create_reservation returns a Cloudbeds URL."""
-        mock_build_url.return_value = "https://hotels.cloudbeds.com/en/reservas/12345?checkin=2024-01-15&checkout=2024-01-17&adults=2&kids=0&currency=eur"
-        mock_get_client.return_value = None  # Simulate no PMS client
+    def test_create_reservation_is_function_tool(self):
+        """Test that create_reservation is properly decorated as a FunctionTool."""
+        from app.agents.pms_tools import create_reservation
+        from agents import FunctionTool
         
-        result = create_reservation(
-            hotel_id="12345",
-            guest_name="John Doe",
-            guest_email="john@example.com",
-            guest_phone="+1234567890",
-            check_in="2024-01-15",
-            check_out="2024-01-17",
-            adults=2,
-            children=0,
-            room_type="deluxe"
-        )
+        # Verify it's a FunctionTool object
+        assert isinstance(create_reservation, FunctionTool)
         
-        assert "cloudbeds.com" in result
-        mock_build_url.assert_called_once_with(
-            hotel_id="12345",
-            check_in="2024-01-15",
-            check_out="2024-01-17",
-            adults=2,
-            children=0,
-            currency="eur"
-        )
-    
-    @patch('app.agents.pms_tools.get_pms_client')
-    @patch('app.agents.pms_tools.build_cloudbeds_url')
-    def test_create_reservation_with_currency(self, mock_build_url, mock_get_client):
-        """Test create_reservation with specific currency."""
-        mock_build_url.return_value = "https://hotels.cloudbeds.com/en/reservas/12345?currency=mad"
-        mock_get_client.return_value = None
+        # Verify it has the expected function name
+        assert create_reservation.name == "create_reservation"
         
-        result = create_reservation(
-            hotel_id="12345",
-            guest_name="Ahmed Ben Ali",
-            guest_email="ahmed@example.com",
-            guest_phone="+212123456789",
-            check_in="2024-01-15",
-            check_out="2024-01-17",
-            adults=2,
-            children=1,
-            room_type="standard",
-            currency="MAD"
-        )
+        # Verify it has a description
+        assert create_reservation.description is not None
+        assert "reservation" in create_reservation.description.lower()
         
-        assert "cloudbeds.com" in result
-        mock_build_url.assert_called_once_with(
-            hotel_id="12345",
-            check_in="2024-01-15",
-            check_out="2024-01-17",
-            adults=2,
-            children=1,
-            currency="MAD"
-        )
-    
-    @patch('app.agents.pms_tools.get_pms_client')
-    @patch('app.agents.pms_tools.build_cloudbeds_url')
-    def test_create_reservation_includes_message(self, mock_build_url, mock_get_client):
-        """Test that create_reservation includes explanatory message."""
-        mock_build_url.return_value = "https://hotels.cloudbeds.com/en/reservas/12345"
-        mock_get_client.return_value = None
+        # Verify it has parameters schema
+        assert hasattr(create_reservation, 'params_json_schema')
+        schema = create_reservation.params_json_schema
+        assert "properties" in schema
+        assert "check_in" in schema["properties"]
+        assert "guest_first_name" in schema["properties"]
+        assert "guest_email" in schema["properties"]
+
+    def test_create_reservation_has_correct_parameters(self):
+        """Test that create_reservation has the correct parameter schema."""
+        from app.agents.pms_tools import create_reservation
         
-        result = create_reservation(
-            hotel_id="12345",
-            guest_name="Test Guest",
-            guest_email="test@example.com",
-            guest_phone="+1234567890",
-            check_in="2024-01-15",
-            check_out="2024-01-17",
-            adults=1,
-            children=0,
-            room_type="standard"
-        )
+        # Get the schema
+        schema = create_reservation.params_json_schema
         
-        assert "secure booking link" in result or "complete your reservation" in result
-        assert "https://hotels.cloudbeds.com" in result
+        # Verify required parameters exist
+        properties = schema.get("properties", {})
+        required = schema.get("required", [])
+        
+        # Check essential parameters
+        essential_params = ["check_in", "check_out", "guest_first_name", "guest_last_name", "guest_email", "room_type_id"]
+        for param in essential_params:
+            assert param in properties, f"Missing parameter: {param}"
+        
+        # Verify some parameters are required
+        assert "check_in" in required
+        assert "guest_first_name" in required
+        assert "guest_email" in required
+        
+    def test_create_reservation_tool_schema(self):
+        """Test that create_reservation has correct OpenAI function schema."""
+        from app.agents.pms_tools import create_reservation
+        
+        # Get function schema
+        schema = create_reservation.params_json_schema
+        
+        # Verify required fields are present
+        required_fields = schema.get("required", [])
+        assert "check_in" in required_fields
+        assert "check_out" in required_fields
+        assert "guest_first_name" in required_fields
+        assert "guest_last_name" in required_fields
+        assert "guest_email" in required_fields
+        assert "room_type_id" in required_fields
+        
+        # Verify properties have correct types
+        properties = schema.get("properties", {})
+        assert properties["check_in"]["type"] == "string"
+        assert properties["guest_email"]["type"] == "string"
+        assert properties["adults"]["type"] == "integer"

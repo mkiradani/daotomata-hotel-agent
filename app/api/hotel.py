@@ -29,30 +29,21 @@ async def get_hotel_info(hotel_id: Optional[str] = None) -> HotelInfo:
     If hotel_id is not provided, uses the current hotel context from the domain.
     """
     try:
-        from supabase import create_client
-
-        supabase = create_client(settings.supabase_url, settings.supabase_key)
+        from ..services.directus_service import directus_service
 
         # Use hotel_id or detect from domain
         if not hotel_id:
             if settings.current_domain:
-                response = (
-                    supabase.table("hotels")
-                    .select("*")
-                    .eq("domain", settings.current_domain)
-                    .execute()
-                )
+                hotel_data = await directus_service.get_hotel_by_domain(settings.current_domain)
             else:
                 raise HTTPException(
                     status_code=400, detail="Hotel ID or domain required"
                 )
         else:
-            response = supabase.table("hotels").select("*").eq("id", hotel_id).execute()
+            hotel_data = await directus_service.get_hotel_by_id(hotel_id)
 
-        if not response.data:
+        if not hotel_data:
             raise HTTPException(status_code=404, detail="Hotel not found")
-
-        hotel_data = response.data[0]
 
         return HotelInfo(
             id=hotel_data["id"],
@@ -263,35 +254,22 @@ async def get_activities(hotel_id: Optional[str] = None) -> List[ActivityInfo]:
     Returns all active activities for the specified hotel.
     """
     try:
-        from supabase import create_client
-
-        supabase = create_client(settings.supabase_url, settings.supabase_key)
+        from ..services.directus_service import directus_service
 
         # Get hotel_id if not provided
         if not hotel_id and settings.current_domain:
-            hotel_response = (
-                supabase.table("hotels")
-                .select("id")
-                .eq("domain", settings.current_domain)
-                .execute()
-            )
-            if hotel_response.data:
-                hotel_id = hotel_response.data[0]["id"]
+            hotel_data = await directus_service.get_hotel_by_domain(settings.current_domain)
+            if hotel_data:
+                hotel_id = hotel_data.get("id")
 
         if not hotel_id:
             raise HTTPException(status_code=400, detail="Hotel ID required")
 
         # Fetch activities
-        response = (
-            supabase.table("activities")
-            .select("*")
-            .eq("hotel_id", hotel_id)
-            .eq("is_active", True)
-            .execute()
-        )
+        activities_data = await directus_service.get_hotel_activities(hotel_id)
 
         activities = []
-        for activity in response.data:
+        for activity in activities_data:
             activities.append(
                 ActivityInfo(
                     id=activity["id"],
@@ -323,35 +301,22 @@ async def get_facilities(hotel_id: Optional[str] = None) -> List[FacilityInfo]:
     Returns all active facilities for the specified hotel, grouped by category.
     """
     try:
-        from supabase import create_client
-
-        supabase = create_client(settings.supabase_url, settings.supabase_key)
+        from ..services.directus_service import directus_service
 
         # Get hotel_id if not provided
         if not hotel_id and settings.current_domain:
-            hotel_response = (
-                supabase.table("hotels")
-                .select("id")
-                .eq("domain", settings.current_domain)
-                .execute()
-            )
-            if hotel_response.data:
-                hotel_id = hotel_response.data[0]["id"]
+            hotel_data = await directus_service.get_hotel_by_domain(settings.current_domain)
+            if hotel_data:
+                hotel_id = hotel_data.get("id")
 
         if not hotel_id:
             raise HTTPException(status_code=400, detail="Hotel ID required")
 
         # Fetch facilities
-        response = (
-            supabase.table("facilities")
-            .select("*")
-            .eq("hotel_id", hotel_id)
-            .eq("is_active", True)
-            .execute()
-        )
+        facilities_data = await directus_service.get_hotel_facilities(hotel_id)
 
         facilities = []
-        for facility in response.data:
+        for facility in facilities_data:
             facilities.append(
                 FacilityInfo(
                     id=facility["id"],

@@ -75,7 +75,7 @@ app = FastAPI(
 
     ### 🔧 Integration
 
-    - Supabase database integration
+    - Directus CMS database integration
     - Multi-tenant hotel support
     - Cloudbeds PMS integration
     - Real-time webhook processing

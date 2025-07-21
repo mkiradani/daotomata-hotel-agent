@@ -23,10 +23,11 @@ class Settings(BaseSettings):
     openai_api_key: str = Field(..., env="OPENAI_API_KEY")
     openai_model: str = Field(default="gpt-4o", env="OPENAI_MODEL")
 
-    # Supabase Configuration
-    supabase_url: str = Field(..., env="SUPABASE_URL")
-    supabase_key: str = Field(..., env="SUPABASE_ANON_KEY")
-    supabase_service_key: Optional[str] = Field(None, env="SUPABASE_SERVICE_ROLE_KEY")
+    # Directus Configuration
+    directus_url: str = Field(..., env="DIRECTUS_URL")
+    directus_token: str = Field(..., env="DIRECTUS_TOKEN")
+    directus_email: Optional[str] = Field(None, env="DIRECTUS_EMAIL")
+    directus_password: Optional[str] = Field(None, env="DIRECTUS_PASSWORD")
 
     # Redis Configuration (for caching and sessions)
     redis_url: str = Field(default="redis://localhost:6379", env="REDIS_URL")

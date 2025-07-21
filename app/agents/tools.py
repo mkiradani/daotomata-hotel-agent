@@ -277,46 +277,224 @@ async def get_hotel_facilities(
         return f"Error retrieving facilities: {str(e)}"
 
 
+async def _get_hotel_coordinates(hotel_id: str) -> Optional[tuple[float, float, str]]:
+    """Get hotel coordinates and city from hotel_id.
+    
+    Returns:
+        Tuple of (latitude, longitude, city_name) or None if not found
+    """
+    try:
+        # First try to get stored coordinates
+        response = supabase.table("hotels").select(
+            "latitude, longitude, address, name"
+        ).eq("id", hotel_id).execute()
+        
+        if not response.data:
+            return None
+            
+        hotel_data = response.data[0]
+        
+        # If we have stored coordinates, use them
+        if hotel_data.get("latitude") and hotel_data.get("longitude"):
+            city = "Hotel Location"
+            if hotel_data.get("address") and isinstance(hotel_data["address"], dict):
+                city = hotel_data["address"].get("city", hotel_data.get("name", "Hotel Location"))
+            
+            return (
+                float(hotel_data["latitude"]), 
+                float(hotel_data["longitude"]), 
+                city
+            )
+        
+        # If no coordinates but we have an address, try to extract city
+        if hotel_data.get("address") and isinstance(hotel_data["address"], dict):
+            address = hotel_data["address"]
+            city = address.get("city", hotel_data.get("name", "Hotel Location"))
+            
+            # For now, return some default coordinates for major cities
+            # In a real implementation, you would use a geocoding service
+            city_coordinates = {
+                "madrid": (40.4168, -3.7038),
+                "barcelona": (41.3851, 2.1734),
+                "valencia": (39.4699, -0.3763),
+                "sevilla": (37.3891, -5.9845),
+                "bilbao": (43.2630, -2.9350),
+                "málaga": (36.7213, -4.4217),
+                "palma": (39.5696, 2.6502),
+                "las palmas": (28.1248, -15.4300),
+                "alicante": (38.3452, -0.4810),
+                "córdoba": (37.8882, -4.7794),
+                "valladolid": (41.6523, -4.7245),
+                "vigo": (42.2406, -8.7207),
+                "gijón": (43.5322, -5.6611),
+                "hospitalet": (41.3598, 2.1074),
+                "vitoria": (42.8467, -2.6716),
+                "granada": (37.1773, -3.5986),
+                "oviedo": (43.3614, -5.8593),
+                "badalona": (41.4509, 2.2487),
+                "cartagena": (37.6056, -0.9868),
+                "terrassa": (41.5640, 2.0110),
+                "jerez": (36.6868, -6.1362),
+                "sabadell": (41.5431, 2.1090),
+                "móstoles": (40.3217, -3.8647),
+                "santa cruz": (28.4636, -16.2518),
+                "pamplona": (42.8125, -1.6458),
+                "almería": (36.8381, -2.4597),
+                "fuenlabrada": (40.2842, -3.7938),
+                "leganés": (40.3167, -3.7667),
+                "donostia": (43.3183, -1.9812),
+                "burgos": (42.3439, -3.6969),
+                "albacete": (38.9942, -1.8564),
+                "getafe": (40.3058, -3.7327),
+                "castellón": (39.9864, -0.0513),
+                "alcorcón": (40.3459, -3.8248),
+                "logroño": (42.4627, -2.4449),
+                "badajoz": (38.8794, -6.9706),
+                "salamanca": (40.9651, -5.6640),
+                "huelva": (37.2614, -6.9447),
+                "marbella": (36.5108, -4.8850),
+                "tarragona": (41.1189, 1.2445),
+                "león": (42.6026, -5.5706),
+                "cadiz": (36.5297, -6.2920),
+                "dos hermanas": (37.2820, -5.9200),
+                "parla": (40.2367, -3.7683),
+                "torrejón": (40.4562, -3.4825),
+                "alcalá": (40.4823, -3.3656),
+                "reus": (41.1558, 1.1074),
+                "ourense": (42.3397, -7.8642),
+                "lugo": (43.0096, -7.5569),
+                "santiago": (42.8805, -8.5456),
+                "cáceres": (39.4753, -6.3724),
+            }
+            
+            city_key = city.lower()
+            if city_key in city_coordinates:
+                lat, lon = city_coordinates[city_key]
+                return (lat, lon, city)
+        
+        return None
+        
+    except Exception as e:
+        print(f"Error getting hotel coordinates: {e}")
+        return None
+
+
 @function_tool
 async def get_local_weather(
     ctx: RunContextWrapper[Any], 
     city: Optional[str] = None,
-    hotel_id: Optional[str] = None
+    hotel_id: Optional[str] = None,
+    include_activity_advice: bool = True
 ) -> str:
-    """Get current weather information for the hotel location.
+    """Get current weather information for the hotel location using OpenMeteo API.
 
     Args:
         city: City name. If not provided, uses the hotel's location.
         hotel_id: The hotel ID. If not provided, uses the current hotel context.
+        include_activity_advice: Whether to include activity recommendations based on weather.
     """
     try:
+        from ..services.weather_service import weather_service
+        
         # Use hotel_id from context if not provided
         if not hotel_id and hasattr(ctx.context, "hotel_id"):
             hotel_id = ctx.context.hotel_id
 
-        # Try to get city from hotel location if not provided
-        if not city and hotel_id:
-            try:
-                # Fetch hotel location from Supabase
-                response = supabase.table("hotels").select("address").eq("id", hotel_id).execute()
-                if response.data and response.data[0].get("address"):
-                    address = response.data[0]["address"]
-                    city = address.get("city", "Hotel Location")
-            except Exception:
-                city = "Hotel Location"
+        # Try to get coordinates and city from hotel_id
+        coordinates = None
+        if hotel_id:
+            coordinates = await _get_hotel_coordinates(hotel_id)
         
-        if not city:
-            city = "Hotel Location"
+        # If we have coordinates, use OpenMeteo API
+        if coordinates:
+            latitude, longitude, city_name = coordinates
+            
+            async with weather_service as client:
+                weather = await client.get_current_weather(latitude, longitude, city_name)
+                
+                # Format weather response
+                response = f"**Current Weather in {weather.city}**\n\n"
+                response += f"🌡️ **Temperature**: {weather.temperature:.1f}°C"
+                
+                if weather.temperature_min is not None and weather.temperature_max is not None:
+                    response += f" (High: {weather.temperature_max:.1f}°C, Low: {weather.temperature_min:.1f}°C)"
+                
+                response += f"\n🌤️ **Conditions**: {weather.weather_description}"
+                
+                if weather.precipitation_probability:
+                    response += f"\n🌧️ **Rain Chance**: {weather.precipitation_probability}%"
+                
+                if weather.humidity:
+                    response += f"\n💧 **Humidity**: {weather.humidity}%"
+                
+                if weather.wind_speed:
+                    response += f"\n💨 **Wind**: {weather.wind_speed:.1f} km/h"
+                    if weather.wind_gusts and weather.wind_gusts > weather.wind_speed * 1.3:
+                        response += f" (gusts up to {weather.wind_gusts:.1f} km/h)"
+                
+                if weather.cloud_cover:
+                    response += f"\n☁️ **Cloud Cover**: {weather.cloud_cover}%"
+                
+                if weather.uv_index:
+                    response += f"\n☀️ **UV Index**: {weather.uv_index:.1f}"
+                    if weather.uv_index > 6:
+                        response += " (High - use sun protection)"
+                    elif weather.uv_index > 3:
+                        response += " (Moderate)"
+                
+                # Add activity advice if requested
+                if include_activity_advice:
+                    advice = weather_service.get_activity_advice(weather)
+                    
+                    response += f"\n\n**🎯 Activity Recommendations**\n"
+                    response += f"Overall suitability: {advice.outdoor_suitability.value.title()}\n"
+                    response += f"Advice: {advice.advice}\n"
+                    
+                    if advice.recommended_activities:
+                        response += f"\n✅ **Recommended**: {', '.join(advice.recommended_activities[:4])}"
+                    
+                    if advice.avoid_activities:
+                        response += f"\n❌ **Avoid**: {', '.join(advice.avoid_activities[:3])}"
+                    
+                    response += f"\n\n👕 **Clothing**: {advice.clothing_advice}"
+                
+                return response
+                
+        else:
+            # Fallback: try to get city from hotel if no coordinates
+            if not city and hotel_id:
+                try:
+                    response = supabase.table("hotels").select("address, name").eq("id", hotel_id).execute()
+                    if response.data:
+                        hotel_data = response.data[0]
+                        if hotel_data.get("address") and isinstance(hotel_data["address"], dict):
+                            city = hotel_data["address"].get("city", hotel_data.get("name", "Hotel Location"))
+                        else:
+                            city = hotel_data.get("name", "Hotel Location")
+                except Exception:
+                    city = "Hotel Location"
+            
+            if not city:
+                city = "Hotel Location"
 
-        # In a real implementation, this would call a weather API
-        # For now, return mock weather data
-        import random
+            # Return fallback message when no coordinates available
+            return f"""**Weather Information for {city}**
 
-        weather_conditions = ["sunny", "partly cloudy", "cloudy", "light rain", "clear"]
-        temperature = random.randint(15, 28)
-        condition = random.choice(weather_conditions)
+🌡️ Weather data is temporarily unavailable, but here are some general recommendations:
 
-        return f"**Current Weather in {city}**\n\nTemperature: {temperature}°C\nCondition: {condition.title()}\nHumidity: {random.randint(40, 80)}%\nWind: {random.randint(5, 20)} km/h"
+**🎯 Activity Planning Tips:**
+• Check local weather apps for current conditions
+• Indoor activities are always available (museums, shopping, spa)
+• Hotel concierge can provide real-time weather updates
+• Most outdoor activities in the area are enjoyable year-round
+
+**👕 General Clothing Advice:**
+• Dress in comfortable layers
+• Bring a light jacket for evening
+• Comfortable walking shoes recommended
+• Sun protection for outdoor activities
+
+For the most current weather conditions, please ask our concierge staff or check a local weather app."""
 
     except Exception as e:
         return f"Error retrieving weather information: {str(e)}"

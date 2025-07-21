@@ -279,19 +279,37 @@ async def get_hotel_facilities(
 
 @function_tool
 async def get_local_weather(
-    ctx: RunContextWrapper[Any], city: Optional[str] = None
+    ctx: RunContextWrapper[Any], 
+    city: Optional[str] = None,
+    hotel_id: Optional[str] = None
 ) -> str:
     """Get current weather information for the hotel location.
 
     Args:
         city: City name. If not provided, uses the hotel's location.
+        hotel_id: The hotel ID. If not provided, uses the current hotel context.
     """
     try:
-        # In a real implementation, this would call a weather API
-        # For now, return mock weather data
+        # Use hotel_id from context if not provided
+        if not hotel_id and hasattr(ctx.context, "hotel_id"):
+            hotel_id = ctx.context.hotel_id
+
+        # Try to get city from hotel location if not provided
+        if not city and hotel_id:
+            try:
+                # Fetch hotel location from Supabase
+                response = supabase.table("hotels").select("address").eq("id", hotel_id).execute()
+                if response.data and response.data[0].get("address"):
+                    address = response.data[0]["address"]
+                    city = address.get("city", "Hotel Location")
+            except Exception:
+                city = "Hotel Location"
+        
         if not city:
             city = "Hotel Location"
 
+        # In a real implementation, this would call a weather API
+        # For now, return mock weather data
         import random
 
         weather_conditions = ["sunny", "partly cloudy", "cloudy", "light rain", "clear"]
@@ -311,6 +329,7 @@ async def request_hotel_service(
     description: str,
     room_number: Optional[str] = None,
     priority: str = "normal",
+    hotel_id: Optional[str] = None,
 ) -> str:
     """Request a hotel service (housekeeping, room service, maintenance, etc.).
 
@@ -319,14 +338,39 @@ async def request_hotel_service(
         description: Detailed description of the service request
         room_number: Room number if applicable
         priority: Priority level (low, normal, high, urgent)
+        hotel_id: The hotel ID. If not provided, uses the current hotel context.
     """
     try:
+        # Use hotel_id from context if not provided
+        if not hotel_id and hasattr(ctx.context, "hotel_id"):
+            hotel_id = ctx.context.hotel_id
+
         # Generate a mock service request ID
         import uuid
-
+        
         request_id = str(uuid.uuid4())[:8]
 
         # In a real implementation, this would create a service request in the PMS
+        # and associate it with the specific hotel_id
+        try:
+            if hotel_id:
+                # Store service request in database associated with hotel
+                request_data = {
+                    "id": request_id,
+                    "hotel_id": hotel_id,
+                    "service_type": service_type,
+                    "description": description,
+                    "room_number": room_number,
+                    "priority": priority,
+                    "status": "received",
+                    "created_at": datetime.now().isoformat(),
+                }
+                
+                # In production, save to database:
+                # supabase.table("service_requests").insert(request_data).execute()
+        except Exception as e:
+            print(f"Could not store service request in database: {e}")
+
         response = f"**Service Request Submitted**\n\n"
         response += f"Request ID: {request_id}\n"
         response += f"Service Type: {service_type.title()}\n"
@@ -334,6 +378,9 @@ async def request_hotel_service(
 
         if room_number:
             response += f"Room Number: {room_number}\n"
+
+        if hotel_id:
+            response += f"Hotel ID: {hotel_id}\n"
 
         response += f"Priority: {priority.title()}\n"
         response += f"Status: Received\n"

@@ -16,7 +16,7 @@ sys.path.insert(0, str(project_root))
 from openai import AsyncOpenAI
 from pydantic import BaseModel
 
-from app.agents.hotel_agents import HotelAgent
+from app.agents.hotel_agents import triage_agent
 from app.models import ChatMessage
 from .config import TEST_HOTELS, TEST_SCENARIOS, HotelConfig, ConversationScenario
 from .logger import ConversationLogger
@@ -48,7 +48,7 @@ class ConversationSimulator:
         """
         self.openai_client = openai_client or AsyncOpenAI()
         self.logger = ConversationLogger()
-        self.agents: Dict[str, HotelAgent] = {}
+        self.agents: Dict[str, Any] = {}
         
     async def setup_test_hotels(self) -> None:
         """Setup test hotel configurations in the system."""
@@ -73,8 +73,8 @@ class ConversationSimulator:
                 "activities": hotel.activities
             }
             
-            # Create hotel agent for this hotel
-            self.agents[hotel.id] = HotelAgent(hotel_id=hotel.id)
+            # Create hotel agent for this hotel - use triage agent as main agent
+            self.agents[hotel.id] = triage_agent
             
             self.logger.log_info(f"Setup test hotel: {hotel.name} ({hotel.id})")
     
@@ -130,29 +130,27 @@ class ConversationSimulator:
                     "turn": turn_count
                 })
                 
-                # Get agent response
-                chat_message = ChatMessage(
-                    message=current_message,
-                    user_id=f"test_user_{conversation_id}",
-                    session_id=conversation_id,
-                    hotel_id=scenario.hotel_id
-                )
-                
                 # Process message with agent
                 agent_start = datetime.now()
                 try:
-                    response = await agent.process_message(chat_message)
+                    # Use the OpenAI Agents SDK to run the agent
+                    from agents import run
+                    
+                    # Create a simple message context
+                    result = run(agent, current_message)
+                    response_content = result.messages[-1].content if result.messages else "No response"
+                    
                     agent_duration = (datetime.now() - agent_start).total_seconds()
                     
                     # Extract tools used from response (if available)
-                    used_tools = self._extract_tools_from_response(response)
+                    used_tools = self._extract_tools_from_response(response_content)
                     tools_used.extend(used_tools)
                     
                     # Log agent response
                     self.logger.log_conversation(
                         conversation_id=conversation_id,
                         role="assistant",
-                        content=response.response,
+                        content=response_content,
                         turn_number=turn_count,
                         tools_used=used_tools,
                         processing_time=agent_duration
@@ -160,7 +158,7 @@ class ConversationSimulator:
                     
                     messages.append({
                         "role": "assistant",
-                        "content": response.response,
+                        "content": response_content,
                         "timestamp": datetime.now().isoformat(),
                         "turn": turn_count,
                         "tools_used": used_tools,
@@ -169,7 +167,7 @@ class ConversationSimulator:
                     
                     agent_responses.append({
                         "turn": turn_count,
-                        "response": response.response,
+                        "response": response_content,
                         "tools_used": used_tools,
                         "processing_time": agent_duration,
                         "metadata": {
@@ -247,7 +245,7 @@ class ConversationSimulator:
         
         # This is a simplified extraction - in a real implementation,
         # you would integrate with the OpenAI Agents framework to track tool usage
-        response_text = response.response.lower() if hasattr(response, 'response') else str(response).lower()
+        response_text = str(response).lower()
         
         # Look for tool indicators in the response
         tool_indicators = {

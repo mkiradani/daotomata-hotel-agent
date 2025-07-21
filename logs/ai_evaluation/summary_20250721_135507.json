@@ -1,0 +1,53 @@
+{
+  "session_id": "20250721_135507",
+  "timestamp": "2025-07-21T13:55:07.387367",
+  "statistics": {
+    "total_conversations": 5,
+    "total_evaluations": 5,
+    "pass_rate": 1.0,
+    "average_score": 0.9351,
+    "min_score": 0.913,
+    "max_score": 0.9585000000000001,
+    "tool_coverage": 1.0
+  },
+  "dimension_scores": {
+    "accuracy": 0.9339999999999999,
+    "helpfulness": 0.914,
+    "tool_usage": 1.0,
+    "conversation_flow": 0.8640000000000001,
+    "politeness": 0.95
+  },
+  "tool_usage": {
+    "expected_tools": [
+      "get_local_weather",
+      "request_hotel_service",
+      "get_hotel_activities",
+      "check_room_availability",
+      "get_hotel_info",
+      "get_hotel_facilities"
+    ],
+    "used_tools": [
+      "get_local_weather",
+      "request_hotel_service",
+      "get_hotel_activities",
+      "check_room_availability",
+      "get_hotel_info",
+      "get_hotel_facilities"
+    ],
+    "coverage_rate": 1.0
+  },
+  "top_issues": [
+    {
+      "issue": "mantener el excelente nivel de calidad",
+      "frequency": 5
+    }
+  ],
+  "files": {
+    "conversations": "logs/ai_evaluation/conversations_20250721_135507.jsonl",
+    "evaluations": "logs/ai_evaluation/evaluations_20250721_135507.jsonl",
+    "summary": "logs/ai_evaluation/summary_20250721_135507.json",
+    "csv": "logs/ai_evaluation/results_20250721_135507.csv"
+  },
+  "demo_mode": true,
+  "total_scenarios": 5
+}

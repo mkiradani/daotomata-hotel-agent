@@ -1,0 +1,2 @@
+{"conversation_id": "test_001", "timestamp": "2025-07-21T13:52:18.143852", "role": "user", "content": "Hello, I need information about your hotel", "turn_number": 1, "tools_used": [], "processing_time": null, "metadata": {}}
+{"conversation_id": "test_001", "timestamp": "2025-07-21T13:52:18.144050", "role": "assistant", "content": "I'd be happy to help you with information about our hotel!", "turn_number": 1, "tools_used": ["get_hotel_info"], "processing_time": 1.5, "metadata": {}}

@@ -2,10 +2,22 @@
 
 import asyncio
 from typing import Optional, Dict, Any, List
-from py_directus import Directus, F
 import httpx
 
 from ..config import settings
+
+# Using httpx directly instead of py_directus due to compatibility issues
+try:
+    # Try to import py_directus for future use
+    from py_directus import Directus, F
+    PY_DIRECTUS_AVAILABLE = True
+except ImportError:
+    # Fallback: Define dummy classes
+    class Directus:
+        pass
+    class F:
+        pass
+    PY_DIRECTUS_AVAILABLE = False
 
 
 class DirectusService:

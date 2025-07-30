@@ -1,0 +1,101 @@
+{
+  "summary": {
+    "passed_scenarios": 0,
+    "total_scenarios": 4,
+    "success_rate": 0.0,
+    "mcp_data_scenarios": 0,
+    "mcp_data_rate": 0.0,
+    "duration_seconds": 4.080025,
+    "completed_at": "2025-07-21T17:11:23.654239"
+  },
+  "scenarios": [
+    {
+      "id": "directus_hotel_info",
+      "name": "Hotel Information from Directus",
+      "messages": [
+        {
+          "user_message": "Tell me about Maison Demo hotel - what services and facilities does it offer?",
+          "agent_response": "I apologize, but I'm experiencing some technical difficulties. Please try again in a moment, or contact our front desk for immediate assistance.",
+          "agent_used": "error_handler",
+          "tools_used": [],
+          "validations": {
+            "has_response": true,
+            "expected_data_found": [],
+            "adequate_length": true
+          }
+        }
+      ],
+      "passed": false,
+      "errors": [
+        "Expected data not found: ['Maison Demo', 'facilities', 'services']"
+      ],
+      "mcp_data_found": false
+    },
+    {
+      "id": "directus_hotel_list",
+      "name": "List All Hotels from Directus",
+      "messages": [
+        {
+          "user_message": "What hotels are available in your system? Show me their names and details.",
+          "agent_response": "I apologize, but I'm experiencing some technical difficulties. Please try again in a moment, or contact our front desk for immediate assistance.",
+          "agent_used": "error_handler",
+          "tools_used": [],
+          "validations": {
+            "has_response": true,
+            "expected_data_found": [],
+            "adequate_length": true
+          }
+        }
+      ],
+      "passed": false,
+      "errors": [
+        "Expected data not found: ['Maison Demo', 'Baberrih Hotel']"
+      ],
+      "mcp_data_found": false
+    },
+    {
+      "id": "baberrih_hotel_info",
+      "name": "Baberrih Hotel Information",
+      "messages": [
+        {
+          "user_message": "Can you tell me about Baberrih Hotel and what it offers?",
+          "agent_response": "I apologize, but I'm experiencing some technical difficulties. Please try again in a moment, or contact our front desk for immediate assistance.",
+          "agent_used": "error_handler",
+          "tools_used": [],
+          "validations": {
+            "has_response": true,
+            "expected_data_found": [],
+            "adequate_length": true
+          }
+        }
+      ],
+      "passed": false,
+      "errors": [
+        "Expected data not found: ['Baberrih Hotel', 'information']"
+      ],
+      "mcp_data_found": false
+    },
+    {
+      "id": "directus_booking_inquiry",
+      "name": "Booking Inquiry with Real Data",
+      "messages": [
+        {
+          "user_message": "I want to book a room at Maison Demo for tomorrow. What room types are available?",
+          "agent_response": "I apologize, but I'm experiencing some technical difficulties. Please try again in a moment, or contact our front desk for immediate assistance.",
+          "agent_used": "error_handler",
+          "tools_used": [],
+          "validations": {
+            "has_response": true,
+            "expected_data_found": [],
+            "adequate_length": true
+          }
+        }
+      ],
+      "passed": false,
+      "errors": [
+        "Expected data not found: ['Maison Demo', 'room', 'available']"
+      ],
+      "mcp_data_found": false
+    }
+  ]
+}

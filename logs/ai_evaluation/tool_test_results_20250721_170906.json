@@ -1,0 +1,874 @@
+{
+  "metadata": {
+    "timestamp": "2025-07-21T17:09:06.683826",
+    "total_tests": 54,
+    "hotels_tested": [
+      "hotel_sevilla_historic",
+      "hotel_madrid_luxury",
+      "hotel_barcelona_beach"
+    ],
+    "tools_tested": [
+      "get_local_weather",
+      "request_hotel_service",
+      "search_reservations",
+      "get_reservation_details",
+      "get_room_types_info",
+      "get_hotel_info",
+      "check_real_room_availability",
+      "create_reservation",
+      "get_hotel_facilities",
+      "get_hotel_activities",
+      "check_room_availability"
+    ]
+  },
+  "results": [
+    {
+      "tool_name": "get_hotel_info",
+      "hotel_id": "hotel_madrid_luxury",
+      "test_case": "basic_info",
+      "success": false,
+      "response_content": "",
+      "execution_time": 1e-06,
+      "error_message": "'FunctionTool' object is not callable",
+      "response_length": 0,
+      "contains_expected_content": false,
+      "timestamp": "2025-07-21 17:09:06.682342"
+    },
+    {
+      "tool_name": "get_hotel_info",
+      "hotel_id": "hotel_madrid_luxury",
+      "test_case": "explicit_hotel_id",
+      "success": false,
+      "response_content": "",
+      "execution_time": 1e-06,
+      "error_message": "'FunctionTool' object is not callable",
+      "response_length": 0,
+      "contains_expected_content": false,
+      "timestamp": "2025-07-21 17:09:06.682927"
+    },
+    {
+      "tool_name": "check_room_availability",
+      "hotel_id": "hotel_madrid_luxury",
+      "test_case": "valid_dates",
+      "success": false,
+      "response_content": "",
+      "execution_time": 1e-06,
+      "error_message": "'FunctionTool' object is not callable",
+      "response_length": 0,
+      "contains_expected_content": false,
+      "timestamp": "2025-07-21 17:09:06.682960"
+    },
+    {
+      "tool_name": "check_room_availability",
+      "hotel_id": "hotel_madrid_luxury",
+      "test_case": "invalid_past_date",
+      "success": false,
+      "response_content": "",
+      "execution_time": 1e-06,
+      "error_message": "'FunctionTool' object is not callable",
+      "response_length": 0,
+      "contains_expected_content": false,
+      "timestamp": "2025-07-21 17:09:06.682985"
+    },
+    {
+      "tool_name": "check_room_availability",
+      "hotel_id": "hotel_madrid_luxury",
+      "test_case": "many_guests",
+      "success": false,
+      "response_content": "",
+      "execution_time": 1e-06,
+      "error_message": "'FunctionTool' object is not callable",
+      "response_length": 0,
+      "contains_expected_content": false,
+      "timestamp": "2025-07-21 17:09:06.683003"
+    },
+    {
+      "tool_name": "get_hotel_activities",
+      "hotel_id": "hotel_madrid_luxury",
+      "test_case": "get_all_activities",
+      "success": false,
+      "response_content": "",
+      "execution_time": 1e-06,
+      "error_message": "'FunctionTool' object is not callable",
+      "response_length": 0,
+      "contains_expected_content": false,
+      "timestamp": "2025-07-21 17:09:06.683018"
+    },
+    {
+      "tool_name": "get_hotel_facilities",
+      "hotel_id": "hotel_madrid_luxury",
+      "test_case": "get_all_facilities",
+      "success": false,
+      "response_content": "",
+      "execution_time": 1e-06,
+      "error_message": "'FunctionTool' object is not callable",
+      "response_length": 0,
+      "contains_expected_content": false,
+      "timestamp": "2025-07-21 17:09:06.683032"
+    },
+    {
+      "tool_name": "get_local_weather",
+      "hotel_id": "hotel_madrid_luxury",
+      "test_case": "hotel_weather",
+      "success": false,
+      "response_content": "",
+      "execution_time": 0.0,
+      "error_message": "'FunctionTool' object is not callable",
+      "response_length": 0,
+      "contains_expected_content": false,
+      "timestamp": "2025-07-21 17:09:06.683046"
+    },
+    {
+      "tool_name": "get_local_weather",
+      "hotel_id": "hotel_madrid_luxury",
+      "test_case": "weather_with_activities",
+      "success": false,
+      "response_content": "",
+      "execution_time": 1e-06,
+      "error_message": "'FunctionTool' object is not callable",
+      "response_length": 0,
+      "contains_expected_content": false,
+      "timestamp": "2025-07-21 17:09:06.683059"
+    },
+    {
+      "tool_name": "get_local_weather",
+      "hotel_id": "hotel_madrid_luxury",
+      "test_case": "specific_city_weather",
+      "success": false,
+      "response_content": "",
+      "execution_time": 1e-06,
+      "error_message": "'FunctionTool' object is not callable",
+      "response_length": 0,
+      "contains_expected_content": false,
+      "timestamp": "2025-07-21 17:09:06.683073"
+    },
+    {
+      "tool_name": "request_hotel_service",
+      "hotel_id": "hotel_madrid_luxury",
+      "test_case": "housekeeping_request",
+      "success": false,
+      "response_content": "",
+      "execution_time": 1e-06,
+      "error_message": "'FunctionTool' object is not callable",
+      "response_length": 0,
+      "contains_expected_content": false,
+      "timestamp": "2025-07-21 17:09:06.683087"
+    },
+    {
+      "tool_name": "request_hotel_service",
+      "hotel_id": "hotel_madrid_luxury",
+      "test_case": "room_service_request",
+      "success": false,
+      "response_content": "",
+      "execution_time": 1e-06,
+      "error_message": "'FunctionTool' object is not callable",
+      "response_length": 0,
+      "contains_expected_content": false,
+      "timestamp": "2025-07-21 17:09:06.683100"
+    },
+    {
+      "tool_name": "request_hotel_service",
+      "hotel_id": "hotel_madrid_luxury",
+      "test_case": "maintenance_request",
+      "success": false,
+      "response_content": "",
+      "execution_time": 1e-06,
+      "error_message": "'FunctionTool' object is not callable",
+      "response_length": 0,
+      "contains_expected_content": false,
+      "timestamp": "2025-07-21 17:09:06.683113"
+    },
+    {
+      "tool_name": "check_real_room_availability",
+      "hotel_id": "hotel_madrid_luxury",
+      "test_case": "pms_valid_dates",
+      "success": false,
+      "response_content": "",
+      "execution_time": 1e-06,
+      "error_message": "'FunctionTool' object is not callable",
+      "response_length": 0,
+      "contains_expected_content": false,
+      "timestamp": "2025-07-21 17:09:06.683131"
+    },
+    {
+      "tool_name": "create_reservation",
+      "hotel_id": "hotel_madrid_luxury",
+      "test_case": "create_with_redirect",
+      "success": false,
+      "response_content": "",
+      "execution_time": 0.0,
+      "error_message": "'FunctionTool' object is not callable",
+      "response_length": 0,
+      "contains_expected_content": false,
+      "timestamp": "2025-07-21 17:09:06.683149"
+    },
+    {
+      "tool_name": "search_reservations",
+      "hotel_id": "hotel_madrid_luxury",
+      "test_case": "search_by_email",
+      "success": false,
+      "response_content": "",
+      "execution_time": 1e-06,
+      "error_message": "'FunctionTool' object is not callable",
+      "response_length": 0,
+      "contains_expected_content": false,
+      "timestamp": "2025-07-21 17:09:06.683167"
+    },
+    {
+      "tool_name": "get_reservation_details",
+      "hotel_id": "hotel_madrid_luxury",
+      "test_case": "nonexistent_reservation",
+      "success": false,
+      "response_content": "",
+      "execution_time": 1e-06,
+      "error_message": "'FunctionTool' object is not callable",
+      "response_length": 0,
+      "contains_expected_content": false,
+      "timestamp": "2025-07-21 17:09:06.683183"
+    },
+    {
+      "tool_name": "get_room_types_info",
+      "hotel_id": "hotel_madrid_luxury",
+      "test_case": "get_all_room_types",
+      "success": false,
+      "response_content": "",
+      "execution_time": 1e-06,
+      "error_message": "'FunctionTool' object is not callable",
+      "response_length": 0,
+      "contains_expected_content": false,
+      "timestamp": "2025-07-21 17:09:06.683199"
+    },
+    {
+      "tool_name": "get_hotel_info",
+      "hotel_id": "hotel_barcelona_beach",
+      "test_case": "basic_info",
+      "success": false,
+      "response_content": "",
+      "execution_time": 1e-06,
+      "error_message": "'FunctionTool' object is not callable",
+      "response_length": 0,
+      "contains_expected_content": false,
+      "timestamp": "2025-07-21 17:09:06.683225"
+    },
+    {
+      "tool_name": "get_hotel_info",
+      "hotel_id": "hotel_barcelona_beach",
+      "test_case": "explicit_hotel_id",
+      "success": false,
+      "response_content": "",
+      "execution_time": 1e-06,
+      "error_message": "'FunctionTool' object is not callable",
+      "response_length": 0,
+      "contains_expected_content": false,
+      "timestamp": "2025-07-21 17:09:06.683237"
+    },
+    {
+      "tool_name": "check_room_availability",
+      "hotel_id": "hotel_barcelona_beach",
+      "test_case": "valid_dates",
+      "success": false,
+      "response_content": "",
+      "execution_time": 1e-06,
+      "error_message": "'FunctionTool' object is not callable",
+      "response_length": 0,
+      "contains_expected_content": false,
+      "timestamp": "2025-07-21 17:09:06.683254"
+    },
+    {
+      "tool_name": "check_room_availability",
+      "hotel_id": "hotel_barcelona_beach",
+      "test_case": "invalid_past_date",
+      "success": false,
+      "response_content": "",
+      "execution_time": 0.0,
+      "error_message": "'FunctionTool' object is not callable",
+      "response_length": 0,
+      "contains_expected_content": false,
+      "timestamp": "2025-07-21 17:09:06.683271"
+    },
+    {
+      "tool_name": "check_room_availability",
+      "hotel_id": "hotel_barcelona_beach",
+      "test_case": "many_guests",
+      "success": false,
+      "response_content": "",
+      "execution_time": 0.0,
+      "error_message": "'FunctionTool' object is not callable",
+      "response_length": 0,
+      "contains_expected_content": false,
+      "timestamp": "2025-07-21 17:09:06.683283"
+    },
+    {
+      "tool_name": "get_hotel_activities",
+      "hotel_id": "hotel_barcelona_beach",
+      "test_case": "get_all_activities",
+      "success": false,
+      "response_content": "",
+      "execution_time": 1e-06,
+      "error_message": "'FunctionTool' object is not callable",
+      "response_length": 0,
+      "contains_expected_content": false,
+      "timestamp": "2025-07-21 17:09:06.683295"
+    },
+    {
+      "tool_name": "get_hotel_facilities",
+      "hotel_id": "hotel_barcelona_beach",
+      "test_case": "get_all_facilities",
+      "success": false,
+      "response_content": "",
+      "execution_time": 0.0,
+      "error_message": "'FunctionTool' object is not callable",
+      "response_length": 0,
+      "contains_expected_content": false,
+      "timestamp": "2025-07-21 17:09:06.683308"
+    },
+    {
+      "tool_name": "get_local_weather",
+      "hotel_id": "hotel_barcelona_beach",
+      "test_case": "hotel_weather",
+      "success": false,
+      "response_content": "",
+      "execution_time": 0.0,
+      "error_message": "'FunctionTool' object is not callable",
+      "response_length": 0,
+      "contains_expected_content": false,
+      "timestamp": "2025-07-21 17:09:06.683320"
+    },
+    {
+      "tool_name": "get_local_weather",
+      "hotel_id": "hotel_barcelona_beach",
+      "test_case": "weather_with_activities",
+      "success": false,
+      "response_content": "",
+      "execution_time": 1e-06,
+      "error_message": "'FunctionTool' object is not callable",
+      "response_length": 0,
+      "contains_expected_content": false,
+      "timestamp": "2025-07-21 17:09:06.683332"
+    },
+    {
+      "tool_name": "get_local_weather",
+      "hotel_id": "hotel_barcelona_beach",
+      "test_case": "specific_city_weather",
+      "success": false,
+      "response_content": "",
+      "execution_time": 0.0,
+      "error_message": "'FunctionTool' object is not callable",
+      "response_length": 0,
+      "contains_expected_content": false,
+      "timestamp": "2025-07-21 17:09:06.683345"
+    },
+    {
+      "tool_name": "request_hotel_service",
+      "hotel_id": "hotel_barcelona_beach",
+      "test_case": "housekeeping_request",
+      "success": false,
+      "response_content": "",
+      "execution_time": 1e-06,
+      "error_message": "'FunctionTool' object is not callable",
+      "response_length": 0,
+      "contains_expected_content": false,
+      "timestamp": "2025-07-21 17:09:06.683358"
+    },
+    {
+      "tool_name": "request_hotel_service",
+      "hotel_id": "hotel_barcelona_beach",
+      "test_case": "room_service_request",
+      "success": false,
+      "response_content": "",
+      "execution_time": 0.0,
+      "error_message": "'FunctionTool' object is not callable",
+      "response_length": 0,
+      "contains_expected_content": false,
+      "timestamp": "2025-07-21 17:09:06.683372"
+    },
+    {
+      "tool_name": "request_hotel_service",
+      "hotel_id": "hotel_barcelona_beach",
+      "test_case": "maintenance_request",
+      "success": false,
+      "response_content": "",
+      "execution_time": 1e-06,
+      "error_message": "'FunctionTool' object is not callable",
+      "response_length": 0,
+      "contains_expected_content": false,
+      "timestamp": "2025-07-21 17:09:06.683386"
+    },
+    {
+      "tool_name": "check_real_room_availability",
+      "hotel_id": "hotel_barcelona_beach",
+      "test_case": "pms_valid_dates",
+      "success": false,
+      "response_content": "",
+      "execution_time": 1e-06,
+      "error_message": "'FunctionTool' object is not callable",
+      "response_length": 0,
+      "contains_expected_content": false,
+      "timestamp": "2025-07-21 17:09:06.683404"
+    },
+    {
+      "tool_name": "create_reservation",
+      "hotel_id": "hotel_barcelona_beach",
+      "test_case": "create_with_redirect",
+      "success": false,
+      "response_content": "",
+      "execution_time": 0.0,
+      "error_message": "'FunctionTool' object is not callable",
+      "response_length": 0,
+      "contains_expected_content": false,
+      "timestamp": "2025-07-21 17:09:06.683421"
+    },
+    {
+      "tool_name": "search_reservations",
+      "hotel_id": "hotel_barcelona_beach",
+      "test_case": "search_by_email",
+      "success": false,
+      "response_content": "",
+      "execution_time": 1e-06,
+      "error_message": "'FunctionTool' object is not callable",
+      "response_length": 0,
+      "contains_expected_content": false,
+      "timestamp": "2025-07-21 17:09:06.683436"
+    },
+    {
+      "tool_name": "get_reservation_details",
+      "hotel_id": "hotel_barcelona_beach",
+      "test_case": "nonexistent_reservation",
+      "success": false,
+      "response_content": "",
+      "execution_time": 1e-06,
+      "error_message": "'FunctionTool' object is not callable",
+      "response_length": 0,
+      "contains_expected_content": false,
+      "timestamp": "2025-07-21 17:09:06.683449"
+    },
+    {
+      "tool_name": "get_room_types_info",
+      "hotel_id": "hotel_barcelona_beach",
+      "test_case": "get_all_room_types",
+      "success": false,
+      "response_content": "",
+      "execution_time": 0.0,
+      "error_message": "'FunctionTool' object is not callable",
+      "response_length": 0,
+      "contains_expected_content": false,
+      "timestamp": "2025-07-21 17:09:06.683467"
+    },
+    {
+      "tool_name": "get_hotel_info",
+      "hotel_id": "hotel_sevilla_historic",
+      "test_case": "basic_info",
+      "success": false,
+      "response_content": "",
+      "execution_time": 1e-06,
+      "error_message": "'FunctionTool' object is not callable",
+      "response_length": 0,
+      "contains_expected_content": false,
+      "timestamp": "2025-07-21 17:09:06.683492"
+    },
+    {
+      "tool_name": "get_hotel_info",
+      "hotel_id": "hotel_sevilla_historic",
+      "test_case": "explicit_hotel_id",
+      "success": false,
+      "response_content": "",
+      "execution_time": 1e-06,
+      "error_message": "'FunctionTool' object is not callable",
+      "response_length": 0,
+      "contains_expected_content": false,
+      "timestamp": "2025-07-21 17:09:06.683505"
+    },
+    {
+      "tool_name": "check_room_availability",
+      "hotel_id": "hotel_sevilla_historic",
+      "test_case": "valid_dates",
+      "success": false,
+      "response_content": "",
+      "execution_time": 1e-06,
+      "error_message": "'FunctionTool' object is not callable",
+      "response_length": 0,
+      "contains_expected_content": false,
+      "timestamp": "2025-07-21 17:09:06.683522"
+    },
+    {
+      "tool_name": "check_room_availability",
+      "hotel_id": "hotel_sevilla_historic",
+      "test_case": "invalid_past_date",
+      "success": false,
+      "response_content": "",
+      "execution_time": 1e-06,
+      "error_message": "'FunctionTool' object is not callable",
+      "response_length": 0,
+      "contains_expected_content": false,
+      "timestamp": "2025-07-21 17:09:06.683537"
+    },
+    {
+      "tool_name": "check_room_availability",
+      "hotel_id": "hotel_sevilla_historic",
+      "test_case": "many_guests",
+      "success": false,
+      "response_content": "",
+      "execution_time": 1e-06,
+      "error_message": "'FunctionTool' object is not callable",
+      "response_length": 0,
+      "contains_expected_content": false,
+      "timestamp": "2025-07-21 17:09:06.683550"
+    },
+    {
+      "tool_name": "get_hotel_activities",
+      "hotel_id": "hotel_sevilla_historic",
+      "test_case": "get_all_activities",
+      "success": false,
+      "response_content": "",
+      "execution_time": 0.0,
+      "error_message": "'FunctionTool' object is not callable",
+      "response_length": 0,
+      "contains_expected_content": false,
+      "timestamp": "2025-07-21 17:09:06.683564"
+    },
+    {
+      "tool_name": "get_hotel_facilities",
+      "hotel_id": "hotel_sevilla_historic",
+      "test_case": "get_all_facilities",
+      "success": false,
+      "response_content": "",
+      "execution_time": 0.0,
+      "error_message": "'FunctionTool' object is not callable",
+      "response_length": 0,
+      "contains_expected_content": false,
+      "timestamp": "2025-07-21 17:09:06.683578"
+    },
+    {
+      "tool_name": "get_local_weather",
+      "hotel_id": "hotel_sevilla_historic",
+      "test_case": "hotel_weather",
+      "success": false,
+      "response_content": "",
+      "execution_time": 1e-06,
+      "error_message": "'FunctionTool' object is not callable",
+      "response_length": 0,
+      "contains_expected_content": false,
+      "timestamp": "2025-07-21 17:09:06.683590"
+    },
+    {
+      "tool_name": "get_local_weather",
+      "hotel_id": "hotel_sevilla_historic",
+      "test_case": "weather_with_activities",
+      "success": false,
+      "response_content": "",
+      "execution_time": 0.0,
+      "error_message": "'FunctionTool' object is not callable",
+      "response_length": 0,
+      "contains_expected_content": false,
+      "timestamp": "2025-07-21 17:09:06.683602"
+    },
+    {
+      "tool_name": "get_local_weather",
+      "hotel_id": "hotel_sevilla_historic",
+      "test_case": "specific_city_weather",
+      "success": false,
+      "response_content": "",
+      "execution_time": 1e-06,
+      "error_message": "'FunctionTool' object is not callable",
+      "response_length": 0,
+      "contains_expected_content": false,
+      "timestamp": "2025-07-21 17:09:06.683615"
+    },
+    {
+      "tool_name": "request_hotel_service",
+      "hotel_id": "hotel_sevilla_historic",
+      "test_case": "housekeeping_request",
+      "success": false,
+      "response_content": "",
+      "execution_time": 0.0,
+      "error_message": "'FunctionTool' object is not callable",
+      "response_length": 0,
+      "contains_expected_content": false,
+      "timestamp": "2025-07-21 17:09:06.683628"
+    },
+    {
+      "tool_name": "request_hotel_service",
+      "hotel_id": "hotel_sevilla_historic",
+      "test_case": "room_service_request",
+      "success": false,
+      "response_content": "",
+      "execution_time": 0.0,
+      "error_message": "'FunctionTool' object is not callable",
+      "response_length": 0,
+      "contains_expected_content": false,
+      "timestamp": "2025-07-21 17:09:06.683640"
+    },
+    {
+      "tool_name": "request_hotel_service",
+      "hotel_id": "hotel_sevilla_historic",
+      "test_case": "maintenance_request",
+      "success": false,
+      "response_content": "",
+      "execution_time": 1e-06,
+      "error_message": "'FunctionTool' object is not callable",
+      "response_length": 0,
+      "contains_expected_content": false,
+      "timestamp": "2025-07-21 17:09:06.683651"
+    },
+    {
+      "tool_name": "check_real_room_availability",
+      "hotel_id": "hotel_sevilla_historic",
+      "test_case": "pms_valid_dates",
+      "success": false,
+      "response_content": "",
+      "execution_time": 0.0,
+      "error_message": "'FunctionTool' object is not callable",
+      "response_length": 0,
+      "contains_expected_content": false,
+      "timestamp": "2025-07-21 17:09:06.683667"
+    },
+    {
+      "tool_name": "create_reservation",
+      "hotel_id": "hotel_sevilla_historic",
+      "test_case": "create_with_redirect",
+      "success": false,
+      "response_content": "",
+      "execution_time": 1e-06,
+      "error_message": "'FunctionTool' object is not callable",
+      "response_length": 0,
+      "contains_expected_content": false,
+      "timestamp": "2025-07-21 17:09:06.683682"
+    },
+    {
+      "tool_name": "search_reservations",
+      "hotel_id": "hotel_sevilla_historic",
+      "test_case": "search_by_email",
+      "success": false,
+      "response_content": "",
+      "execution_time": 1e-06,
+      "error_message": "'FunctionTool' object is not callable",
+      "response_length": 0,
+      "contains_expected_content": false,
+      "timestamp": "2025-07-21 17:09:06.683694"
+    },
+    {
+      "tool_name": "get_reservation_details",
+      "hotel_id": "hotel_sevilla_historic",
+      "test_case": "nonexistent_reservation",
+      "success": false,
+      "response_content": "",
+      "execution_time": 0.0,
+      "error_message": "'FunctionTool' object is not callable",
+      "response_length": 0,
+      "contains_expected_content": false,
+      "timestamp": "2025-07-21 17:09:06.683712"
+    },
+    {
+      "tool_name": "get_room_types_info",
+      "hotel_id": "hotel_sevilla_historic",
+      "test_case": "get_all_room_types",
+      "success": false,
+      "response_content": "",
+      "execution_time": 1e-06,
+      "error_message": "'FunctionTool' object is not callable",
+      "response_length": 0,
+      "contains_expected_content": false,
+      "timestamp": "2025-07-21 17:09:06.683724"
+    }
+  ],
+  "analysis": {
+    "overall": {
+      "total_tests": 54,
+      "successful_tests": 0,
+      "success_rate": 0.0,
+      "avg_execution_time": 6.851851851851852e-07
+    },
+    "by_tool": {
+      "get_hotel_info": {
+        "total": 6,
+        "successful": 0,
+        "avg_execution_time": 1e-06,
+        "test_cases": [
+          "basic_info",
+          "explicit_hotel_id",
+          "basic_info",
+          "explicit_hotel_id",
+          "basic_info",
+          "explicit_hotel_id"
+        ],
+        "success_rate": 0.0
+      },
+      "check_room_availability": {
+        "total": 9,
+        "successful": 0,
+        "avg_execution_time": 7.777777777777778e-07,
+        "test_cases": [
+          "valid_dates",
+          "invalid_past_date",
+          "many_guests",
+          "valid_dates",
+          "invalid_past_date",
+          "many_guests",
+          "valid_dates",
+          "invalid_past_date",
+          "many_guests"
+        ],
+        "success_rate": 0.0
+      },
+      "get_hotel_activities": {
+        "total": 3,
+        "successful": 0,
+        "avg_execution_time": 6.666666666666666e-07,
+        "test_cases": [
+          "get_all_activities",
+          "get_all_activities",
+          "get_all_activities"
+        ],
+        "success_rate": 0.0
+      },
+      "get_hotel_facilities": {
+        "total": 3,
+        "successful": 0,
+        "avg_execution_time": 3.333333333333333e-07,
+        "test_cases": [
+          "get_all_facilities",
+          "get_all_facilities",
+          "get_all_facilities"
+        ],
+        "success_rate": 0.0
+      },
+      "get_local_weather": {
+        "total": 9,
+        "successful": 0,
+        "avg_execution_time": 5.555555555555555e-07,
+        "test_cases": [
+          "hotel_weather",
+          "weather_with_activities",
+          "specific_city_weather",
+          "hotel_weather",
+          "weather_with_activities",
+          "specific_city_weather",
+          "hotel_weather",
+          "weather_with_activities",
+          "specific_city_weather"
+        ],
+        "success_rate": 0.0
+      },
+      "request_hotel_service": {
+        "total": 9,
+        "successful": 0,
+        "avg_execution_time": 6.666666666666667e-07,
+        "test_cases": [
+          "housekeeping_request",
+          "room_service_request",
+          "maintenance_request",
+          "housekeeping_request",
+          "room_service_request",
+          "maintenance_request",
+          "housekeeping_request",
+          "room_service_request",
+          "maintenance_request"
+        ],
+        "success_rate": 0.0
+      },
+      "check_real_room_availability": {
+        "total": 3,
+        "successful": 0,
+        "avg_execution_time": 6.666666666666666e-07,
+        "test_cases": [
+          "pms_valid_dates",
+          "pms_valid_dates",
+          "pms_valid_dates"
+        ],
+        "success_rate": 0.0
+      },
+      "create_reservation": {
+        "total": 3,
+        "successful": 0,
+        "avg_execution_time": 3.333333333333333e-07,
+        "test_cases": [
+          "create_with_redirect",
+          "create_with_redirect",
+          "create_with_redirect"
+        ],
+        "success_rate": 0.0
+      },
+      "search_reservations": {
+        "total": 3,
+        "successful": 0,
+        "avg_execution_time": 1e-06,
+        "test_cases": [
+          "search_by_email",
+          "search_by_email",
+          "search_by_email"
+        ],
+        "success_rate": 0.0
+      },
+      "get_reservation_details": {
+        "total": 3,
+        "successful": 0,
+        "avg_execution_time": 6.666666666666666e-07,
+        "test_cases": [
+          "nonexistent_reservation",
+          "nonexistent_reservation",
+          "nonexistent_reservation"
+        ],
+        "success_rate": 0.0
+      },
+      "get_room_types_info": {
+        "total": 3,
+        "successful": 0,
+        "avg_execution_time": 6.666666666666666e-07,
+        "test_cases": [
+          "get_all_room_types",
+          "get_all_room_types",
+          "get_all_room_types"
+        ],
+        "success_rate": 0.0
+      }
+    },
+    "by_hotel": {
+      "hotel_madrid_luxury": {
+        "total": 18,
+        "successful": 0,
+        "success_rate": 0.0
+      },
+      "hotel_barcelona_beach": {
+        "total": 18,
+        "successful": 0,
+        "success_rate": 0.0
+      },
+      "hotel_sevilla_historic": {
+        "total": 18,
+        "successful": 0,
+        "success_rate": 0.0
+      }
+    },
+    "issues": {
+      "problematic_tools": [
+        "get_hotel_info",
+        "check_room_availability",
+        "get_hotel_activities",
+        "get_hotel_facilities",
+        "get_local_weather",
+        "request_hotel_service",
+        "check_real_room_availability",
+        "create_reservation",
+        "search_reservations",
+        "get_reservation_details",
+        "get_room_types_info"
+      ],
+      "problematic_hotels": [
+        "hotel_madrid_luxury",
+        "hotel_barcelona_beach",
+        "hotel_sevilla_historic"
+      ],
+      "common_errors": [
+        [
+          "'FunctionTool' object is not callable",
+          54
+        ]
+      ]
+    },
+    "recommendations": [
+      "Review and fix tools with low success rates: get_hotel_info, check_room_availability, get_hotel_activities, get_hotel_facilities, get_local_weather, request_hotel_service, check_real_room_availability, create_reservation, search_reservations, get_reservation_details, get_room_types_info",
+      "Check hotel configurations for: hotel_madrid_luxury, hotel_barcelona_beach, hotel_sevilla_historic",
+      "Consider implementing PMS integration for better tool coverage"
+    ]
+  }
+}

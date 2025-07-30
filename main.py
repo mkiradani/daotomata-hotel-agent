@@ -38,16 +38,31 @@ load_dotenv()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan manager."""
+    from app.services.chatwoot_service import initialize_chatwoot_configs, chatwoot_service
+    
     # Startup
     print(f"🏨 Starting {settings.app_name} v{settings.app_version}")
     print(f"🤖 OpenAI Model: {settings.openai_model}")
     print(f"🏢 Current Domain: {settings.current_domain or 'Not set'}")
 
-    # Initialize any required services here
+    # Initialize Chatwoot configurations for all hotels
+    try:
+        await initialize_chatwoot_configs()
+        print("✅ Chatwoot configurations initialized")
+    except Exception as e:
+        print(f"⚠️ Warning: Could not initialize Chatwoot configs: {e}")
+
     yield
 
     # Shutdown
     print("🛑 Shutting down Hotel Bot API")
+    
+    # Close Chatwoot service
+    try:
+        await chatwoot_service.close()
+        print("✅ Chatwoot service closed")
+    except Exception as e:
+        print(f"⚠️ Warning: Error closing Chatwoot service: {e}")
 
 
 app = FastAPI(

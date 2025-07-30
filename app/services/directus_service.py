@@ -1,10 +1,16 @@
 """Directus service for database operations."""
 
 import asyncio
+import logging
+import json
 from typing import Optional, Dict, Any, List
 import httpx
 
 from ..config import settings
+
+# Configure logger
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 # Using httpx directly instead of py_directus due to compatibility issues
 try:
@@ -114,6 +120,50 @@ class DirectusService:
         except Exception as e:
             print(f"Error getting hotel name for {hotel_id}: {e}")
             return None
+    
+    async def get_hotels_with_chatwoot_config(self) -> List[Dict[str, Any]]:
+        """Get all hotels that have Chatwoot configuration."""
+        # Use httpx directly for reliability
+        async with httpx.AsyncClient() as http_client:
+            try:
+                headers = {
+                    "Authorization": f"Bearer {settings.directus_token}"
+                }
+                
+                # Query hotels with chatwoot fields
+                url = f"{settings.directus_url}/items/hotels"
+                params = {
+                    "fields": "id,name,domain,chatwoot_base_url,chatwoot_api_token,chatwoot_api_access_token,chatwoot_account_id",
+                    # Filter for hotels that have at least the base URL configured
+                    "filter[chatwoot_base_url][_nnull]": "true"
+                }
+                
+                response = await http_client.get(url, headers=headers, params=params)
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    hotels = data.get("data", [])
+                    logger.info(f"🏨 Found {len(hotels)} hotels with Chatwoot config")
+                    
+                    # Log each hotel's config for debugging
+                    for hotel in hotels:
+                        logger.info(f"Hotel {hotel.get('id')} - {hotel.get('name')}:")
+                        logger.info(f"  Base URL: {hotel.get('chatwoot_base_url')}")
+                        logger.info(f"  API Token: {'SET' if hotel.get('chatwoot_api_token') else 'NOT SET'}")
+                        logger.info(f"  Account ID: {hotel.get('chatwoot_account_id')}")
+                        logger.info(f"  Website Token: {hotel.get('chatwoot_website_token') or 'Not set'}")
+                    
+                    return hotels
+                else:
+                    logger.error(f"❌ Error fetching hotels: {response.status_code}")
+                    logger.error(f"Response: {response.text}")
+                    return []
+                    
+            except Exception as e:
+                logger.error(f"❌ Error getting hotels with Chatwoot config: {e}")
+                import traceback
+                logger.error(f"📚 Traceback: {traceback.format_exc()}")
+                return []
     
     # Activities Operations
     async def get_hotel_activities(self, hotel_id: str) -> List[Dict[str, Any]]:

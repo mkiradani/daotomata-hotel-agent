@@ -207,8 +207,16 @@ class ChatServiceMCP:
         system_message = self._create_system_message(context)
         messages.append({"role": "system", "content": system_message})
 
-        # Add conversation history
-        messages.extend(context.conversation_history)
+        # Add conversation history (clean format for OpenAI)
+        for msg in context.conversation_history:
+            # Only include role and content - remove timestamp and other fields
+            clean_msg = {
+                "role": msg["role"],
+                "content": msg["content"]
+            }
+            messages.append(clean_msg)
+        
+        logger.info(f"🧹 Cleaned {len(context.conversation_history)} history messages for agent")
 
         # Add current user message
         messages.append({"role": "user", "content": request.message})

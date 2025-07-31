@@ -13,6 +13,7 @@ from .pms_tools import (
     search_reservations,
     get_reservation_details,
     get_room_types_info,
+    get_currency_exchange_rate,
 )
 
 
@@ -85,6 +86,7 @@ async def create_booking_agent():
 - Providing detailed information about room types and current rates
 - Assisting with booking modifications and cancellations
 - Explaining hotel policies regarding reservations
+- Converting prices between currencies using hotel's configured exchange rates
 
 **Using Directus Data:**
 - Use Directus tools to get current hotel information, room types, facilities, and activities
@@ -103,13 +105,24 @@ When checking availability, always ask for:
 2. Number of adult guests and children
 3. Any special preferences or requirements
 
-For existing reservations, use search_reservations and get_reservation_details to provide accurate information.""",
+For existing reservations, use search_reservations and get_reservation_details to provide accurate information.
+
+**Currency Conversion:**
+When guests ask about prices in different currencies, use the get_currency_exchange_rate tool to convert using the hotel's configured exchange rates. This tool:
+- Uses the actual exchange rates configured in the hotel's Cloudbeds account
+- Supports all currencies accepted by the hotel
+- Formats numbers according to hotel's currency settings
+- Always provides accurate conversions based on hotel's rates, not generic market rates
+
+Example: If a guest asks "how much is 7500 MAD in EUR?", use:
+get_currency_exchange_rate(amount=7500, from_currency="MAD", to_currency="EUR")""",
         tools=[
             check_real_room_availability,
             create_reservation,
             search_reservations,
             get_reservation_details,
             get_room_types_info,
+            get_currency_exchange_rate,
         ],
         mcp_servers=[directus_server],
         model="gpt-4o",

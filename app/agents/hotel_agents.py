@@ -15,6 +15,7 @@ from .pms_tools import (
     search_reservations,
     get_reservation_details,
     get_room_types_info,
+    get_currency_exchange_rate,
 )
 
 
@@ -30,6 +31,7 @@ booking_agent = Agent(
 - Providing detailed information about room types and current rates
 - Assisting with booking modifications and cancellations
 - Explaining hotel policies regarding reservations
+- Converting prices between currencies using hotel's configured exchange rates
 
 **Important: New Booking Process**
 The create_reservation function now generates secure Cloudbeds URLs for direct booking instead of processing payments directly. When guests want to make a reservation, you will:
@@ -57,7 +59,17 @@ When creating a reservation, collect:
 
 Then use create_reservation to generate the secure booking URL. Explain that the URL will take them directly to the hotel's booking system where they can complete their reservation with secure payment.
 
-For existing reservations, use search_reservations and get_reservation_details to provide accurate information.""",
+For existing reservations, use search_reservations and get_reservation_details to provide accurate information.
+
+**Currency Conversion:**
+When guests ask about prices in different currencies, use the get_currency_exchange_rate tool to convert using the hotel's configured exchange rates. This tool:
+- Uses the actual exchange rates configured in the hotel's Cloudbeds account
+- Supports all currencies accepted by the hotel
+- Formats numbers according to hotel's currency settings
+- Always provides accurate conversions based on hotel's rates, not generic market rates
+
+Example: If a guest asks "how much is 7500 MAD in EUR?", use:
+get_currency_exchange_rate(amount=7500, from_currency="MAD", to_currency="EUR")""",
     tools=[
         check_real_room_availability,
         create_reservation,
@@ -65,6 +77,7 @@ For existing reservations, use search_reservations and get_reservation_details t
         get_reservation_details,
         get_room_types_info,
         get_hotel_info,
+        get_currency_exchange_rate,
     ],
     model="gpt-4o",
 )

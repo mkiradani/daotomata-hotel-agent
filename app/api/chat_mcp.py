@@ -65,6 +65,62 @@ async def clear_session_mcp(session_id: str) -> dict:
         raise HTTPException(status_code=500, detail=f"Error clearing MCP session: {str(e)}")
 
 
+@router.get("/sessions", response_model=List[dict])
+async def get_all_sessions() -> List[dict]:
+    """
+    Get information about all active chat sessions.
+    """
+    try:
+        sessions_info = chat_service_mcp.get_all_sessions_info()
+        return sessions_info
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving sessions info: {str(e)}")
+
+
+@router.get("/sessions/{session_id}/info", response_model=dict)
+async def get_session_info(session_id: str) -> dict:
+    """
+    Get detailed information about a specific session.
+    """
+    try:
+        session_info = chat_service_mcp.get_session_info(session_id)
+        if session_info is None:
+            raise HTTPException(status_code=404, detail="Session not found")
+        return session_info
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving session info: {str(e)}")
+
+
+@router.get("/sessions/stats", response_model=dict)
+async def get_session_stats() -> dict:
+    """
+    Get statistics about all active sessions.
+    """
+    try:
+        stats = chat_service_mcp.get_session_stats()
+        return stats
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving session stats: {str(e)}")
+
+
+@router.delete("/sessions/cleanup")
+async def cleanup_old_sessions(max_age_hours: int = 24) -> dict:
+    """
+    Clean up sessions older than max_age_hours (default: 24 hours).
+    """
+    try:
+        removed_count = chat_service_mcp.cleanup_old_sessions(max_age_hours)
+        return {
+            "message": f"Cleaned up {removed_count} old sessions",
+            "removed_count": removed_count,
+            "max_age_hours": max_age_hours
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error cleaning up sessions: {str(e)}")
+
+
 @router.post("/test")
 async def test_chat_mcp() -> dict:
     """

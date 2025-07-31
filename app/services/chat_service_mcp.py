@@ -2,9 +2,10 @@
 
 import asyncio
 import uuid
+import logging
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from agents import Runner, RunContextWrapper
 from agents.extensions.handoff_prompt import prompt_with_handoff_instructions
@@ -12,6 +13,10 @@ from agents.extensions.handoff_prompt import prompt_with_handoff_instructions
 from ..agents.hotel_agents_mcp import create_triage_agent
 from ..models import ChatRequest, ChatResponse, ChatMessage, MessageRole
 from ..config import settings
+
+# Configure detailed logging for conversation tracking
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("chat_service_mcp")
 
 
 @dataclass
@@ -23,10 +28,16 @@ class HotelContext:
     user_id: Optional[str] = None
     session_id: Optional[str] = None
     conversation_history: List[Dict[str, Any]] = None
+    created_at: Optional[datetime] = None
+    last_activity: Optional[datetime] = None
 
     def __post_init__(self):
         if self.conversation_history is None:
             self.conversation_history = []
+        if self.created_at is None:
+            self.created_at = datetime.now()
+        if self.last_activity is None:
+            self.last_activity = datetime.now()
 
 
 class ChatServiceMCP:
@@ -47,32 +58,49 @@ class ChatServiceMCP:
         try:
             # Get or create session
             session_id = request.session_id or str(uuid.uuid4())
+            
+            logger.info(f"🎯 Processing chat request - Session ID: {session_id}, Hotel ID: {request.hotel_id}")
+            logger.info(f"📝 User message: {request.message[:100]}{'...' if len(request.message) > 100 else ''}")
 
             # Get hotel context
             hotel_context = await self._get_hotel_context(request, session_id)
+            
+            logger.info(f"📊 Session context - History length: {len(hotel_context.conversation_history)}, Created: {hotel_context.created_at}")
 
             # Prepare conversation input
             conversation_input = await self._prepare_conversation_input(
                 request, hotel_context
             )
+            
+            logger.info(f"💬 Prepared conversation input with {len(conversation_input)} messages")
+
+            # Store user message in history BEFORE calling agent
+            # This ensures we don't lose the user's message if agent fails
+            await self._store_user_message(hotel_context, request.message)
+            logger.info(f"📝 Stored user message in history - Length: {len(hotel_context.conversation_history)}")
 
             # Get triage agent with MCP
             triage_agent = await self._get_triage_agent()
 
             # Run the agent
+            logger.info(f"🤖 Running agent with context for hotel {hotel_context.hotel_id}")
             result = await Runner.run(
                 triage_agent, conversation_input, context=hotel_context, max_turns=10
             )
+            
+            logger.info(f"✅ Agent completed successfully - Response length: {len(str(result.final_output))}")
 
-            # Update conversation history
-            await self._update_conversation_history(
-                hotel_context, request.message, result.final_output
-            )
+            # Update conversation history with assistant response
+            await self._store_assistant_response(hotel_context, str(result.final_output))
+            
+            logger.info(f"📚 Updated conversation history - Final length: {len(hotel_context.conversation_history)}")
 
             # Extract metadata from result
             agent_used = self._extract_agent_used(result)
             tools_used = self._extract_tools_used(result)
             handoff_occurred = self._check_handoff_occurred(result)
+            
+            logger.info(f"🔧 Agent metadata - Used: {agent_used}, Tools: {tools_used}, Handoff: {handoff_occurred}")
 
             return ChatResponse(
                 message=str(result.final_output),
@@ -84,29 +112,53 @@ class ChatServiceMCP:
 
         except Exception as e:
             # Enhanced error logging for MCP debugging
-            print(f"❌ Error processing chat with MCP: {str(e)}")
-            print(f"📝 Request details - session_id: {request.session_id}, hotel_id: {request.hotel_id}, message: {request.message[:100]}...")
+            logger.error(f"❌ Error processing chat with MCP: {str(e)}")
+            logger.error(f"📝 Request details - session_id: {request.session_id}, hotel_id: {request.hotel_id}, message: {request.message[:100]}...")
+            
+            # Get or create session context for error handling
+            session_id = request.session_id or str(uuid.uuid4())
+            try:
+                hotel_context = await self._get_hotel_context(request, session_id)
+                
+                # Store user message if not already stored
+                if not any(msg.get("content") == request.message for msg in hotel_context.conversation_history):
+                    await self._store_user_message(hotel_context, request.message)
+                    logger.info(f"📝 Stored user message in error handler - Length: {len(hotel_context.conversation_history)}")
+                
+                logger.error(f"💾 Session state - History: {len(hotel_context.conversation_history)} messages, Last activity: {hotel_context.last_activity}")
+            except Exception as ctx_error:
+                logger.error(f"⚠️ Could not get context in error handler: {ctx_error}")
+                hotel_context = None
             
             import traceback
-            traceback.print_exc()
+            logger.error(f"🔍 Full traceback: {traceback.format_exc()}")
 
             # Check if error is MCP-related
             error_msg = str(e).lower()
             if "mcp" in error_msg or "connection" in error_msg or "server" in error_msg:
-                print("🔧 MCP-related error detected - attempting to reset MCP connection")
+                logger.warning("🔧 MCP-related error detected - attempting to reset MCP connection")
                 try:
                     from ..agents.hotel_agents_mcp import close_directus_mcp_server
                     await close_directus_mcp_server()
-                except:
-                    pass
+                    logger.info("🔄 MCP connection reset attempted")
+                except Exception as reset_error:
+                    logger.error(f"⚠️ Failed to reset MCP connection: {reset_error}")
                 
                 error_response = "I'm having trouble accessing the hotel's live data system. Please try again in a moment, or contact our front desk for immediate assistance."
             else:
                 error_response = "I apologize, but I'm experiencing some technical difficulties. Please try again in a moment, or contact our front desk for immediate assistance."
 
+            # Store error response in history if context available
+            if hotel_context:
+                try:
+                    await self._store_assistant_response(hotel_context, error_response)
+                    logger.info(f"💾 Stored error response in history")
+                except Exception as store_error:
+                    logger.error(f"⚠️ Could not store error response: {store_error}")
+
             return ChatResponse(
                 message=error_response,
-                session_id=request.session_id or str(uuid.uuid4()),
+                session_id=session_id,
                 agent_used="error_handler",
                 tools_used=[],
                 handoff_occurred=False,
@@ -119,6 +171,8 @@ class ChatServiceMCP:
         if session_id not in self.sessions:
             # Create new context
             hotel_id = request.hotel_id
+            
+            logger.info(f"🆕 Creating new session context - Session ID: {session_id}, Hotel ID: {hotel_id}")
 
             self.sessions[session_id] = HotelContext(
                 hotel_id=hotel_id, session_id=session_id, conversation_history=[]
@@ -128,11 +182,16 @@ class ChatServiceMCP:
             if hotel_id:
                 # The agent will get hotel name via MCP tools
                 # For now just store the ID
-                pass
+                logger.info(f"🏨 Hotel context set for hotel ID: {hotel_id}")
+        else:
+            logger.info(f"🔄 Using existing session context - Session ID: {session_id}")
 
         # Update with any new context from request
         context = self.sessions[session_id]
+        context.last_activity = datetime.now()
+        
         if request.user_context:
+            logger.info(f"🔧 Updating context with user data: {list(request.user_context.keys())}")
             for key, value in request.user_context.items():
                 setattr(context, key, value)
 
@@ -148,8 +207,16 @@ class ChatServiceMCP:
         system_message = self._create_system_message(context)
         messages.append({"role": "system", "content": system_message})
 
-        # Add conversation history
-        messages.extend(context.conversation_history)
+        # Add conversation history (clean format for OpenAI)
+        for msg in context.conversation_history:
+            # Only include role and content - remove timestamp and other fields
+            clean_msg = {
+                "role": msg["role"],
+                "content": msg["content"]
+            }
+            messages.append(clean_msg)
+        
+        logger.info(f"🧹 Cleaned {len(context.conversation_history)} history messages for agent")
 
         # Add current user message
         messages.append({"role": "user", "content": request.message})
@@ -158,66 +225,224 @@ class ChatServiceMCP:
 
     def _create_system_message(self, context: HotelContext) -> str:
         """Create system message with hotel context."""
-        system_msg = "You are a helpful hotel assistant with access to real-time hotel data through Directus MCP. "
+        current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
+        system_msg = f"You are a helpful hotel assistant with access to real-time hotel data through Directus MCP. Current time: {current_time}. "
 
         if context.hotel_id:
             system_msg += f"The hotel ID is {context.hotel_id}. Use Directus tools to get current hotel information. "
 
+        # Add conversation context if available
+        if context.conversation_history:
+            recent_context = self._extract_recent_context(context)
+            if recent_context:
+                system_msg += f"Recent conversation context: {recent_context} "
+
+        # Add session duration context
+        if context.created_at:
+            session_duration = datetime.now() - context.created_at
+            if session_duration.total_seconds() > 300:  # 5 minutes
+                system_msg += "This is an ongoing conversation. Continue where you left off naturally. "
+
         system_msg += "Always be professional, friendly, and helpful. "
         system_msg += "Use the available tools to provide accurate information from the hotel's live data. "
+        system_msg += "Remember previous messages in this conversation to provide personalized assistance. "
         system_msg += (
             "If you need specialized assistance, handoff to the appropriate agent."
         )
 
+        logger.info(f"🎭 Created system message with context - Length: {len(system_msg)} chars")
         return system_msg
+
+    def _extract_recent_context(self, context: HotelContext) -> str:
+        """Extract recent conversation context for system message."""
+        if not context.conversation_history:
+            return ""
+        
+        # Get last few messages to understand context
+        recent_messages = context.conversation_history[-4:]  # Last 2 turns
+        
+        context_items = []
+        for msg in recent_messages:
+            if msg["role"] == "user":
+                # Extract key information from user messages
+                content = msg["content"].lower()
+                if any(keyword in content for keyword in ["mi nombre es", "soy", "me llamo"]):
+                    context_items.append("user provided their name")
+                elif any(keyword in content for keyword in ["reserva", "booking", "habitacion"]):
+                    context_items.append("user asking about reservations")
+                elif any(keyword in content for keyword in ["restaurant", "comida", "cenar"]):
+                    context_items.append("user interested in dining")
+                elif any(keyword in content for keyword in ["actividad", "que hacer", "turismo"]):
+                    context_items.append("user asking about activities")
+        
+        return "; ".join(context_items) if context_items else ""
+
+    async def _store_user_message(self, context: HotelContext, user_message: str):
+        """Store user message in conversation history."""
+        timestamp = datetime.now().isoformat()
+        
+        user_msg = {
+            "role": "user", 
+            "content": user_message, 
+            "timestamp": timestamp
+        }
+        
+        context.conversation_history.append(user_msg)
+        context.last_activity = datetime.now()
+        
+        logger.info(f"👤 Stored user message - Length: {len(user_message)} chars")
+        
+        # Keep only last 20 messages to prevent context overflow
+        if len(context.conversation_history) > 20:
+            removed_count = len(context.conversation_history) - 20
+            context.conversation_history = context.conversation_history[-20:]
+            logger.info(f"🧹 Trimmed {removed_count} old messages from history to maintain context size")
+
+    async def _store_assistant_response(self, context: HotelContext, assistant_response: str):
+        """Store assistant response in conversation history."""
+        timestamp = datetime.now().isoformat()
+        
+        assistant_msg = {
+            "role": "assistant", 
+            "content": assistant_response, 
+            "timestamp": timestamp
+        }
+        
+        context.conversation_history.append(assistant_msg)
+        context.last_activity = datetime.now()
+        
+        logger.info(f"🤖 Stored assistant response - Length: {len(assistant_response)} chars")
+        
+        # Keep only last 20 messages to prevent context overflow
+        if len(context.conversation_history) > 20:
+            removed_count = len(context.conversation_history) - 20
+            context.conversation_history = context.conversation_history[-20:]
+            logger.info(f"🧹 Trimmed {removed_count} old messages from history to maintain context size")
 
     async def _update_conversation_history(
         self, context: HotelContext, user_message: str, assistant_response: str
     ):
-        """Update conversation history."""
-        context.conversation_history.extend(
-            [
-                {"role": "user", "content": user_message},
-                {"role": "assistant", "content": assistant_response},
-            ]
-        )
+        """Update conversation history (legacy method - use _store_user_message and _store_assistant_response instead)."""
+        # Add timestamps to messages
+        timestamp = datetime.now().isoformat()
+        
+        new_messages = [
+            {"role": "user", "content": user_message, "timestamp": timestamp},
+            {"role": "assistant", "content": assistant_response, "timestamp": timestamp},
+        ]
+        
+        context.conversation_history.extend(new_messages)
+        context.last_activity = datetime.now()
+        
+        logger.info(f"📝 Added conversation turn - User: {len(user_message)} chars, Assistant: {len(assistant_response)} chars")
 
         # Keep only last 20 messages to prevent context overflow
         if len(context.conversation_history) > 20:
+            removed_count = len(context.conversation_history) - 20
             context.conversation_history = context.conversation_history[-20:]
+            logger.info(f"🧹 Trimmed {removed_count} old messages from history to maintain context size")
 
     def _extract_agent_used(self, result) -> Optional[str]:
         """Extract which agent was used from the result."""
-        # This would need to be implemented based on the actual result structure
-        # For now, return a placeholder
-        return "triage_agent_mcp"
+        try:
+            # Try to extract agent information from result
+            if hasattr(result, 'messages') and result.messages:
+                for message in result.messages:
+                    if hasattr(message, 'sender') and message.sender:
+                        logger.info(f"🤖 Agent identified: {message.sender}")
+                        return message.sender
+                        
+            # Check for handoff patterns in the response
+            response_text = str(result.final_output).lower()
+            if "booking" in response_text or "reservation" in response_text:
+                return "booking_specialist"
+            elif "restaurant" in response_text or "recommendation" in response_text:
+                return "concierge_agent"
+            elif "service" in response_text or "maintenance" in response_text:
+                return "service_agent"
+            elif "activity" in response_text or "entertainment" in response_text:
+                return "activities_agent"
+                
+            logger.info(f"🤖 Using default agent: triage_agent_mcp")
+            return "triage_agent_mcp"
+        except Exception as e:
+            logger.warning(f"⚠️ Error extracting agent: {e}")
+            return "triage_agent_mcp"
 
     def _extract_tools_used(self, result) -> List[str]:
         """Extract which tools were used from the result."""
-        # This would need to be implemented based on the actual result structure
-        # For now, return empty list
-        return []
+        tools_used = []
+        try:
+            # Try to extract tool usage from result
+            if hasattr(result, 'messages') and result.messages:
+                for message in result.messages:
+                    if hasattr(message, 'tool_calls') and message.tool_calls:
+                        for tool_call in message.tool_calls:
+                            if hasattr(tool_call, 'function') and tool_call.function:
+                                tool_name = tool_call.function.name
+                                tools_used.append(tool_name)
+                                logger.info(f"🔧 Tool used: {tool_name}")
+            
+            # Look for common tool patterns in response text
+            response_text = str(result.final_output).lower()
+            if "weather" in response_text:
+                tools_used.append("get_weather")
+            if "availability" in response_text or "available" in response_text:
+                tools_used.append("check_availability")
+                
+            logger.info(f"🛠️ Tools extracted: {tools_used}")
+            return list(set(tools_used))  # Remove duplicates
+        except Exception as e:
+            logger.warning(f"⚠️ Error extracting tools: {e}")
+            return []
 
     def _check_handoff_occurred(self, result) -> bool:
         """Check if a handoff occurred during the conversation."""
-        # This would need to be implemented based on the actual result structure
-        # For now, return False
-        return False
+        try:
+            # Check for handoff patterns in the response
+            response_text = str(result.final_output).lower()
+            handoff_indicators = [
+                "let me connect you",
+                "transferring you to",
+                "specialist will help",
+                "booking specialist",
+                "concierge can help",
+                "service team will",
+                "activities coordinator"
+            ]
+            
+            handoff_occurred = any(indicator in response_text for indicator in handoff_indicators)
+            
+            if handoff_occurred:
+                logger.info(f"🔄 Handoff detected in response")
+            
+            return handoff_occurred
+        except Exception as e:
+            logger.warning(f"⚠️ Error checking handoff: {e}")
+            return False
 
     async def get_session_history(self, session_id: str) -> List[ChatMessage]:
         """Get conversation history for a session."""
+        logger.info(f"📖 Retrieving session history for: {session_id}")
+        
         if session_id not in self.sessions:
+            logger.warning(f"⚠️ Session not found: {session_id}")
             return []
 
         context = self.sessions[session_id]
         messages = []
+        
+        logger.info(f"📚 Found {len(context.conversation_history)} messages in history")
 
         for msg in context.conversation_history:
+            # Use stored timestamp if available, otherwise current time
+            timestamp = datetime.fromisoformat(msg.get("timestamp", datetime.now().isoformat()))
             messages.append(
                 ChatMessage(
                     role=MessageRole(msg["role"]),
                     content=msg["content"],
-                    timestamp=datetime.now(),  # In production, store actual timestamps
+                    timestamp=timestamp,
                 )
             )
 
@@ -225,10 +450,107 @@ class ChatServiceMCP:
 
     async def clear_session(self, session_id: str) -> bool:
         """Clear a conversation session."""
+        logger.info(f"🗑️ Clearing session: {session_id}")
+        
         if session_id in self.sessions:
+            context = self.sessions[session_id]
+            history_length = len(context.conversation_history)
+            
             del self.sessions[session_id]
+            
+            logger.info(f"✅ Cleared session {session_id} with {history_length} messages")
             return True
+        
+        logger.warning(f"⚠️ Attempted to clear non-existent session: {session_id}")
         return False
+
+    def get_session_info(self, session_id: str) -> Optional[Dict[str, Any]]:
+        """Get detailed information about a session."""
+        if session_id not in self.sessions:
+            return None
+            
+        context = self.sessions[session_id]
+        
+        return {
+            "session_id": session_id,
+            "hotel_id": context.hotel_id,
+            "hotel_name": context.hotel_name,
+            "user_id": context.user_id,
+            "created_at": context.created_at.isoformat() if context.created_at else None,
+            "last_activity": context.last_activity.isoformat() if context.last_activity else None,
+            "message_count": len(context.conversation_history),
+            "conversation_preview": [
+                {
+                    "role": msg["role"],
+                    "content": msg["content"][:100] + "..." if len(msg["content"]) > 100 else msg["content"],
+                    "timestamp": msg.get("timestamp")
+                }
+                for msg in context.conversation_history[-5:]  # Last 5 messages
+            ]
+        }
+
+    def get_all_sessions_info(self) -> List[Dict[str, Any]]:
+        """Get information about all active sessions."""
+        sessions_info = []
+        
+        for session_id in self.sessions:
+            info = self.get_session_info(session_id)
+            if info:
+                sessions_info.append(info)
+        
+        logger.info(f"📊 Retrieved info for {len(sessions_info)} active sessions")
+        return sessions_info
+
+    def cleanup_old_sessions(self, max_age_hours: int = 24) -> int:
+        """Clean up sessions older than max_age_hours."""
+        cutoff_time = datetime.now() - timedelta(hours=max_age_hours)
+        sessions_to_remove = []
+        
+        for session_id, context in self.sessions.items():
+            if context.last_activity < cutoff_time:
+                sessions_to_remove.append(session_id)
+        
+        removed_count = 0
+        for session_id in sessions_to_remove:
+            del self.sessions[session_id]
+            removed_count += 1
+            logger.info(f"🧹 Cleaned up old session: {session_id}")
+        
+        if removed_count > 0:
+            logger.info(f"✅ Cleaned up {removed_count} old sessions")
+        
+        return removed_count
+
+    def get_session_stats(self) -> Dict[str, Any]:
+        """Get statistics about current sessions."""
+        if not self.sessions:
+            return {
+                "total_sessions": 0,
+                "total_messages": 0,
+                "average_messages_per_session": 0,
+                "oldest_session_age_minutes": 0,
+                "newest_session_age_minutes": 0
+            }
+        
+        total_messages = sum(len(context.conversation_history) for context in self.sessions.values())
+        session_ages = []
+        now = datetime.now()
+        
+        for context in self.sessions.values():
+            if context.created_at:
+                age_minutes = (now - context.created_at).total_seconds() / 60
+                session_ages.append(age_minutes)
+        
+        stats = {
+            "total_sessions": len(self.sessions),
+            "total_messages": total_messages,
+            "average_messages_per_session": total_messages / len(self.sessions) if self.sessions else 0,
+            "oldest_session_age_minutes": max(session_ages) if session_ages else 0,
+            "newest_session_age_minutes": min(session_ages) if session_ages else 0
+        }
+        
+        logger.info(f"📈 Session stats: {stats}")
+        return stats
 
 
 # Global chat service instance with MCP

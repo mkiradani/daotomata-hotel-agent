@@ -50,6 +50,8 @@ class Settings(BaseSettings):
     # Hotel Context
     current_domain: Optional[str] = Field(None, env="CURRENT_DOMAIN")
 
+    # Chatwoot configuration removed - now stored per hotel in Directus
+
     class Config:
         env_file = ".env"
         case_sensitive = False

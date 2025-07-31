@@ -2,7 +2,7 @@
 
 import os
 from agents import Agent
-from agents.mcp import MCPServerStdio
+from agents.mcp.server import MCPServerStdio
 from .tools import (
     get_local_weather,
     request_hotel_service,

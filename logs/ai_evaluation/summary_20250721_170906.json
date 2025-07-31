@@ -1,0 +1,74 @@
+{
+  "session_id": "20250721_170906",
+  "timestamp": "2025-07-21T17:09:37.540378",
+  "statistics": {
+    "total_conversations": 0,
+    "total_evaluations": 5,
+    "pass_rate": 0.0,
+    "average_score": 0.129,
+    "min_score": 0.1275,
+    "max_score": 0.135,
+    "tool_coverage": 0.0
+  },
+  "dimension_scores": {
+    "accuracy": 0.0,
+    "helpfulness": 0.0,
+    "tool_usage": 0.0,
+    "conversation_flow": 0.86,
+    "politeness": 0.0
+  },
+  "tool_usage": {
+    "expected_tools": [
+      "get_local_weather",
+      "request_hotel_service",
+      "get_hotel_info",
+      "get_hotel_facilities",
+      "get_hotel_activities",
+      "check_room_availability"
+    ],
+    "used_tools": [],
+    "coverage_rate": 0.0
+  },
+  "top_issues": [
+    {
+      "issue": "improve factual accuracy of responses and ensure i",
+      "frequency": 5
+    },
+    {
+      "issue": "enhance response helpfulness by providing more act",
+      "frequency": 5
+    },
+    {
+      "issue": "better tool utilization - missing tools: multiple ",
+      "frequency": 5
+    },
+    {
+      "issue": "maintain more professional and courteous tone thro",
+      "frequency": 5
+    },
+    {
+      "issue": "utilize missing essential tools: get_local_weather",
+      "frequency": 2
+    }
+  ],
+  "files": {
+    "conversations": "logs/ai_evaluation/conversations_20250721_170906.jsonl",
+    "evaluations": "logs/ai_evaluation/evaluations_20250721_170906.jsonl",
+    "summary": "logs/ai_evaluation/summary_20250721_170906.json",
+    "csv": "logs/ai_evaluation/results_20250721_170906.csv"
+  },
+  "total_simulations": 5,
+  "total_evaluations": 5,
+  "scenarios_tested": [
+    "availability_check",
+    "complex_multi_tool",
+    "service_request",
+    "weather_and_activities",
+    "basic_info_inquiry"
+  ],
+  "hotels_tested": [
+    "hotel_sevilla_historic",
+    "hotel_madrid_luxury",
+    "hotel_barcelona_beach"
+  ]
+}

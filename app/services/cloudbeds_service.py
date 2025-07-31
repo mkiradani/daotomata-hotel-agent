@@ -83,6 +83,7 @@ class CloudbedsService:
                 }
             
             # Call Cloudbeds API to get available room types
+            # IMPORTANT: Cloudbeds API returns roomRate as the TOTAL price for all nights, not per night
             params = {
                 "propertyIDs": credentials.get("property_id", ""),
                 "startDate": check_in,
@@ -118,13 +119,17 @@ class CloudbedsService:
                             if property_data.get("propertyRooms"):
                                 for room in property_data["propertyRooms"]:
                                     if room.get("roomsAvailable", 0) > 0:
+                                        # roomRate from API is the total for all nights
+                                        total_rate = float(room.get("roomRate", 0))
+                                        per_night_rate = total_rate / nights if nights > 0 else total_rate
+                                        
                                         available_rooms.append({
                                             "roomTypeID": room.get("roomTypeID"),
                                             "roomTypeName": room.get("roomTypeName"),
                                             "roomsAvailable": room.get("roomsAvailable"),
                                             "maxGuests": room.get("maxGuests"),
-                                            "roomRate": float(room.get("roomRate", 0)),
-                                            "totalRate": float(room.get("roomRate", 0)) * nights if room.get("roomRate") else 0,
+                                            "roomRate": per_night_rate,  # Now this is per night
+                                            "totalRate": total_rate,  # This is the total for all nights
                                             "currency": property_data.get("propertyCurrency", {}).get("currencyCode", "EUR")
                                         })
                         

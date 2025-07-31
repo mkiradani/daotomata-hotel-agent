@@ -49,11 +49,6 @@ class Settings(BaseSettings):
 
     # Hotel Context
     current_domain: Optional[str] = Field(None, env="CURRENT_DOMAIN")
-    
-    # Hotel Contact Information (defaults, can be overridden per hotel)
-    hotel_phone: str = Field(default="+1 (555) 123-4567", env="HOTEL_PHONE")
-    hotel_email: str = Field(default="info@hotel.com", env="HOTEL_EMAIL")
-    hotel_support_hours: str = Field(default="24/7", env="HOTEL_SUPPORT_HOURS")
 
     # Chatwoot configuration removed - now stored per hotel in Directus
 

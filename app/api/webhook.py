@@ -75,11 +75,12 @@ async def chatwoot_webhook(
         logger.info(f"👤 Contact info: {json.dumps(contact_info, indent=2)}")
         logger.info(f"📞 Sender info: {json.dumps(sender_info, indent=2)}")
         
-        # Create chat request with proper context
+        # Create chat request with proper context including conversation_id for HITL
         chat_request = ChatRequest(
             message=message_content,
             session_id=f"chatwoot_{conversation_id}",
             hotel_id=hotel_id,
+            conversation_id=conversation_id,  # Add conversation_id for HITL integration
             user_context={
                 "platform": "chatwoot",
                 "conversation_id": conversation_id,

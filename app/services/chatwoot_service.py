@@ -254,6 +254,101 @@ class ChatwootService:
                 "success": False,
                 "error": f"Error: {str(e)}"
             }
+    
+    async def mark_conversation_open(self, hotel_id: str, conversation_id: int) -> Dict[str, Any]:
+        """
+        Mark a conversation as open in Chatwoot for human agent assignment.
+        This will trigger automatic assignment to available agents.
+        """
+        config = self.get_hotel_config(hotel_id)
+        if not config:
+            return {
+                "success": False,
+                "error": f"No Chatwoot configuration found for hotel {hotel_id}"
+            }
+        
+        url = f"{config.base_url}/api/v1/accounts/{config.account_id}/conversations/{conversation_id}/toggle_status"
+        
+        headers = {
+            "Content-Type": "application/json",
+            "api_access_token": config.api_access_token
+        }
+        
+        payload = {
+            "status": "open"
+        }
+        
+        try:
+            logger.info(f"🔓 Marking conversation {conversation_id} as open for hotel {hotel_id}")
+            response = await self.http_client.post(url, json=payload, headers=headers)
+            
+            if response.status_code == 200:
+                result = response.json()
+                logger.info(f"✅ Marked conversation {conversation_id} as open for hotel {hotel_id}")
+                logger.info(f"📄 Status change result: {result}")
+                return {
+                    "success": True,
+                    "conversation_id": conversation_id,
+                    "status": "open",
+                    "hotel_id": hotel_id,
+                    "response": result
+                }
+            else:
+                error_text = response.text
+                logger.error(f"❌ Failed to mark conversation as open: {response.status_code} - {error_text}")
+                return {
+                    "success": False,
+                    "error": f"Chatwoot API error: {response.status_code}",
+                    "error_details": error_text,
+                    "hotel_id": hotel_id,
+                    "conversation_id": conversation_id
+                }
+                
+        except Exception as e:
+            logger.error(f"💥 Error marking conversation as open: {str(e)}")
+            return {
+                "success": False,
+                "error": f"Error: {str(e)}",
+                "hotel_id": hotel_id,
+                "conversation_id": conversation_id
+            }
+    
+    async def send_private_note(
+        self,
+        hotel_id: str,
+        conversation_id: int,
+        content: str
+    ) -> Dict[str, Any]:
+        """
+        Send a private note to a Chatwoot conversation (only visible to agents).
+        This is a convenience method that calls send_message with private=True.
+        """
+        return await self.send_message(
+            hotel_id=hotel_id,
+            conversation_id=conversation_id,
+            content=content,
+            message_type="outgoing",
+            private=True
+        )
+    
+    async def get_conversation_status(self, hotel_id: str, conversation_id: int) -> Dict[str, Any]:
+        """Get current status of a conversation."""
+        conversation_result = await self.get_conversation(hotel_id, conversation_id)
+        
+        if conversation_result.get("success"):
+            conversation_data = conversation_result.get("conversation", {})
+            status = conversation_data.get("status", "unknown")
+            assignee = conversation_data.get("assignee")
+            
+            return {
+                "success": True,
+                "status": status,
+                "assignee": assignee,
+                "conversation_id": conversation_id,
+                "hotel_id": hotel_id
+            }
+        else:
+            return conversation_result
 
 
 # Global Chatwoot service instance

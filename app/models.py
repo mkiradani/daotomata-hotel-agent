@@ -30,6 +30,7 @@ class ChatRequest(BaseModel):
         None, description="Session ID for conversation continuity"
     )
     hotel_id: Optional[str] = Field(None, description="Hotel ID for context")
+    conversation_id: Optional[int] = Field(None, description="Chatwoot conversation ID for HITL")
     user_context: Optional[Dict[str, Any]] = Field(
         default_factory=dict, description="Additional user context"
     )

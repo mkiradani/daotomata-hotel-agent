@@ -94,8 +94,64 @@ class ChatServiceMCP:
             
             logger.info(f"✅ Agent completed successfully - Response length: {len(str(result.final_output))}")
 
-            # Update conversation history with assistant response
-            await self._store_assistant_response(hotel_context, str(result.final_output))
+            # HITL INTEGRATION: Evaluate response confidence and handle escalation
+            ai_response = str(result.final_output)
+            user_question = request.message
+            
+            # Import HITL manager
+            from .hitl_manager import hitl_manager
+            
+            # Check if HITL is enabled
+            if hitl_manager.is_hitl_enabled():
+                logger.info("🤖 Evaluating AI response confidence for potential HITL escalation...")
+                
+                # Build context for evaluation
+                conversation_context = "\n".join([
+                    f"{msg.get('role', 'unknown')}: {msg.get('content', '')[:200]}"
+                    for msg in hotel_context.conversation_history[-5:]  # Last 5 messages for context
+                ])
+                
+                # Get hotel_id as string for HITL
+                hotel_id_str = str(hotel_context.hotel_id) if hotel_context.hotel_id else "unknown"
+                
+                # Get conversation_id from request (if available)
+                conversation_id = getattr(request, 'conversation_id', None)
+                
+                if conversation_id:
+                    try:
+                        # Evaluate and handle response with HITL
+                        hitl_result = await hitl_manager.evaluate_and_handle_response(
+                            hotel_id=hotel_id_str,
+                            conversation_id=conversation_id,
+                            ai_response=ai_response,
+                            user_question=user_question,
+                            context=conversation_context
+                        )
+                        
+                        logger.info(f"🔍 HITL evaluation: {hitl_result.get('action_taken', 'unknown')}")
+                        logger.info(f"📊 Confidence score: {hitl_result.get('confidence_score', 0):.2f}")
+                        
+                        # If escalated, modify response to inform user
+                        if hitl_result.get("should_escalate", False):
+                            escalation_message = (
+                                "He transferido tu consulta a uno de nuestros agentes humanos "
+                                "para brindarte la mejor asistencia posible. Un miembro de nuestro "
+                                "equipo se pondrá en contacto contigo muy pronto.\n\n"
+                                f"Mientras tanto, aquí tienes la información que pude recopilar:\n\n{ai_response}"
+                            )
+                            ai_response = escalation_message
+                            logger.info("🚨 Response modified to inform user about escalation")
+                        
+                    except Exception as hitl_error:
+                        logger.error(f"❌ HITL evaluation failed: {str(hitl_error)}")
+                        # Continue with normal flow if HITL fails
+                else:
+                    logger.warning("⚠️ No conversation_id provided, skipping HITL evaluation")
+            else:
+                logger.info("🔇 HITL system is disabled, proceeding with normal response")
+
+            # Update conversation history with assistant response (potentially modified)
+            await self._store_assistant_response(hotel_context, ai_response)
             
             logger.info(f"📚 Updated conversation history - Final length: {len(hotel_context.conversation_history)}")
 
@@ -107,7 +163,7 @@ class ChatServiceMCP:
             logger.info(f"🔧 Agent metadata - Used: {agent_used}, Tools: {tools_used}, Handoff: {handoff_occurred}")
 
             return ChatResponse(
-                message=str(result.final_output),
+                message=ai_response,  # Use potentially modified response
                 session_id=session_id,
                 agent_used=agent_used,
                 tools_used=tools_used,

@@ -50,6 +50,11 @@ class Settings(BaseSettings):
     # Hotel Context
     current_domain: Optional[str] = Field(None, env="CURRENT_DOMAIN")
 
+    # HITL (Human-In-The-Loop) Configuration
+    hitl_enabled: bool = Field(default=True, env="HITL_ENABLED")
+    hitl_confidence_threshold: float = Field(default=0.7, env="HITL_CONFIDENCE_THRESHOLD")
+    hitl_evaluation_model: str = Field(default="gpt-4o-mini", env="HITL_EVALUATION_MODEL")
+
     # Chatwoot configuration removed - now stored per hotel in Directus
 
     class Config:

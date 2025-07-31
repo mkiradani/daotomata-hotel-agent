@@ -114,6 +114,7 @@ class ChatServiceMCP:
             # Enhanced error logging for MCP debugging
             logger.error(f"❌ Error processing chat with MCP: {str(e)}")
             logger.error(f"📝 Request details - session_id: {request.session_id}, hotel_id: {request.hotel_id}, message: {request.message[:100]}...")
+            logger.error(f"🔍 Error type: {type(e).__name__}")
             
             # Get or create session context for error handling
             session_id = request.session_id or str(uuid.uuid4())
@@ -135,7 +136,26 @@ class ChatServiceMCP:
 
             # Check if error is MCP-related
             error_msg = str(e).lower()
-            if "mcp" in error_msg or "connection" in error_msg or "server" in error_msg:
+            error_type = type(e).__name__
+            
+            # More specific error categorization
+            if "mcp" in error_msg or "connection" in error_msg or "server" in error_msg or "directus" in error_msg:
+                logger.warning("🔧 Data system error detected")
+                error_category = "data_system"
+            elif "timeout" in error_msg or "timed out" in error_msg:
+                logger.warning("⏱️ Timeout error detected")
+                error_category = "timeout"
+            elif "authentication" in error_msg or "unauthorized" in error_msg or "forbidden" in error_msg:
+                logger.warning("🔐 Authentication error detected")
+                error_category = "auth"
+            elif "rate" in error_msg and "limit" in error_msg:
+                logger.warning("🚦 Rate limit error detected")
+                error_category = "rate_limit"
+            else:
+                logger.warning(f"⚠️ General error detected: {error_type}")
+                error_category = "general"
+            
+            if error_category in ["data_system", "timeout"]:
                 logger.warning("🔧 MCP-related error detected - attempting to reset MCP connection")
                 try:
                     from ..agents.hotel_agents_mcp import close_directus_mcp_server
@@ -144,9 +164,13 @@ class ChatServiceMCP:
                 except Exception as reset_error:
                     logger.error(f"⚠️ Failed to reset MCP connection: {reset_error}")
                 
-                error_response = "I'm having trouble accessing the hotel's live data system. Please try again in a moment, or contact our front desk for immediate assistance."
+                error_response = f"I'm having trouble accessing the hotel's information system at the moment. Please try your question again, or you can reach our front desk at {settings.hotel_phone} or email us at {settings.hotel_email} for immediate assistance."
+            elif error_category == "auth":
+                error_response = f"I'm having trouble verifying access to the hotel system. Please try again, or contact our front desk at {settings.hotel_phone} for assistance."
+            elif error_category == "rate_limit":
+                error_response = f"Our system is experiencing high demand. Please wait a moment and try again, or contact our front desk at {settings.hotel_phone} for immediate help."
             else:
-                error_response = "I apologize, but I'm experiencing some technical difficulties. Please try again in a moment, or contact our front desk for immediate assistance."
+                error_response = f"I apologize for the inconvenience. I'm unable to process your request right now. Please try again shortly, or contact our front desk at {settings.hotel_phone} or email us at {settings.hotel_email}. We're here to help {settings.hotel_support_hours}."
 
             # Store error response in history if context available
             if hotel_context:

@@ -376,3 +376,156 @@ Please:
 - Visit our website
 - Contact reception directly
 - Use the availability check tool to see real-time options"""
+
+
+@function_tool
+async def get_currency_exchange_rate(
+    ctx: RunContextWrapper[Any],
+    amount: float,
+    from_currency: str,
+    to_currency: str,
+    hotel_id: Optional[str] = None,
+) -> str:
+    """Convert prices between currencies using hotel's configured exchange rates.
+    
+    Args:
+        amount: The amount to convert
+        from_currency: Source currency ISO code (e.g., 'EUR', 'USD')
+        to_currency: Target currency ISO code (e.g., 'EUR', 'USD')
+        hotel_id: The hotel ID. If not provided, uses the current hotel context.
+    """
+    try:
+        # Use hotel_id from context if not provided
+        if not hotel_id and hasattr(ctx.context, "hotel_id"):
+            hotel_id = ctx.context.hotel_id
+        
+        if not hotel_id:
+            return "Hotel ID not available in context."
+        
+        # Normalize currency codes
+        from_currency = from_currency.upper()
+        to_currency = to_currency.upper()
+        
+        # Check if conversion is needed
+        if from_currency == to_currency:
+            return f"**Currency Conversion**\n\n{amount:.2f} {from_currency} = {amount:.2f} {to_currency}\n\nNo conversion needed - same currency."
+        
+        # Get currency settings from Cloudbeds
+        if PMS_AVAILABLE and cloudbeds_service:
+            result = await cloudbeds_service.get_currency_settings(int(hotel_id))
+            
+            if not result.get("success"):
+                return f"**Currency Conversion Error**\n\n{result.get('error', 'Failed to get currency settings')}"
+            
+            currency_data = result.get("data", {})
+            default_currency = currency_data.get("default", "EUR").upper()
+            acceptable_currencies = [c.upper() for c in currency_data.get("acceptable", [])]
+            rates_data = currency_data.get("rates", {})
+            fixed_rates = rates_data.get("fixed", [])
+            
+            # Build rates dictionary
+            rates = {}
+            for rate_info in fixed_rates:
+                if rate_info.get("currency") and rate_info.get("rate"):
+                    rates[rate_info["currency"].upper()] = float(rate_info["rate"])
+            
+            # Check if currencies are supported
+            if from_currency not in acceptable_currencies and from_currency != default_currency:
+                return f"""**Currency Conversion Error**
+                
+The currency '{from_currency}' is not supported by this hotel.
+
+**Supported currencies:**
+- Default: {default_currency}
+- Acceptable: {', '.join(acceptable_currencies)}
+
+Please use one of the supported currencies for your inquiry."""
+            
+            if to_currency not in acceptable_currencies and to_currency != default_currency:
+                return f"""**Currency Conversion Error**
+                
+The currency '{to_currency}' is not supported by this hotel.
+
+**Supported currencies:**
+- Default: {default_currency}
+- Acceptable: {', '.join(acceptable_currencies)}
+
+Please use one of the supported currencies for conversion."""
+            
+            # Perform conversion
+            # First convert to default currency if needed
+            if from_currency == default_currency:
+                amount_in_default = amount
+            elif from_currency in rates:
+                # Convert from the source currency to default
+                # If rate is 1.2, it means 1 default = 1.2 source, so source to default is divide
+                amount_in_default = amount / rates[from_currency]
+            else:
+                return f"""**Currency Conversion Error**
+
+No exchange rate found for {from_currency} to {default_currency}.
+
+The hotel has not configured an exchange rate for this currency pair. Please contact reception for assistance with currency conversion."""
+            
+            # Then convert from default to target currency
+            if to_currency == default_currency:
+                converted_amount = amount_in_default
+            elif to_currency in rates:
+                # Convert from default to target
+                # If rate is 1.2, it means 1 default = 1.2 target, so default to target is multiply
+                converted_amount = amount_in_default * rates[to_currency]
+            else:
+                return f"""**Currency Conversion Error**
+
+No exchange rate found for {default_currency} to {to_currency}.
+
+The hotel has not configured an exchange rate for this currency pair. Please contact reception for assistance with currency conversion."""
+            
+            # Format response
+            currency_format = currency_data.get("format", {})
+            decimal_sep = currency_format.get("decimal", ".")
+            thousand_sep = currency_format.get("thousand", ",")
+            
+            # Format numbers with proper separators
+            def format_number(num):
+                # Convert to string with 2 decimal places
+                num_str = f"{num:.2f}"
+                integer_part, decimal_part = num_str.split(".")
+                
+                # Add thousand separators
+                if thousand_sep:
+                    integer_part = "{:,}".format(int(integer_part)).replace(",", thousand_sep)
+                
+                return f"{integer_part}{decimal_sep}{decimal_part}"
+            
+            formatted_amount = format_number(amount)
+            formatted_converted = format_number(converted_amount)
+            
+            response = f"""**Currency Conversion**
+
+{formatted_amount} {from_currency} = **{formatted_converted} {to_currency}**
+
+**Exchange Rate Information:**
+- Hotel's default currency: {default_currency}"""
+            
+            # Show the exchange rates used
+            if from_currency != default_currency and from_currency in rates:
+                response += f"\n- {from_currency} to {default_currency}: 1 {from_currency} = {1/rates[from_currency]:.4f} {default_currency}"
+            if to_currency != default_currency and to_currency in rates:
+                response += f"\n- {default_currency} to {to_currency}: 1 {default_currency} = {rates[to_currency]:.4f} {to_currency}"
+            
+            response += "\n\n*Note: These are the hotel's configured exchange rates. Actual rates may vary for payment processing.*"
+            
+            return response
+            
+        else:
+            return """**Currency Conversion Service Unavailable**
+
+I apologize, but the currency conversion service is not available at the moment.
+
+Please contact reception for assistance with currency conversion and current exchange rates."""
+    
+    except ValueError as e:
+        return f"**Currency Conversion Error**\n\nInvalid amount provided. Please ensure the amount is a valid number."
+    except Exception as e:
+        return f"**Currency Conversion Error**\n\nAn error occurred: {str(e)}"

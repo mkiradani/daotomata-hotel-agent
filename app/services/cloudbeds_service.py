@@ -209,3 +209,69 @@ class CloudbedsService:
         query_string = "&".join([f"{key}={value}" for key, value in params.items()])
         
         return f"{base_url}/{booking_url_id}?{query_string}"
+    
+    async def get_currency_settings(self, hotel_id: int) -> Dict[str, Any]:
+        """Get currency settings and exchange rates for a hotel.
+        
+        Args:
+            hotel_id: The hotel ID
+            
+        Returns:
+            Dict containing currency settings including:
+            - default: Default currency ISO code
+            - acceptable: List of acceptable currency ISO codes
+            - format: Currency formatting settings
+            - rates: Exchange rates (fixed rates configured by property)
+        """
+        try:
+            # Get hotel credentials
+            credentials = await self.get_hotel_credentials(hotel_id)
+            if not credentials.get("api_key"):
+                return {
+                    "success": False,
+                    "error": "Cloudbeds API not configured for this hotel"
+                }
+            
+            # Prepare request
+            params = {
+                "propertyID": credentials.get("property_id", "")
+            }
+            
+            headers = {
+                "Authorization": f"Bearer {credentials['api_key']}",
+                "Content-Type": "application/json"
+            }
+            
+            # Make API request
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    f"{self.base_url}/getCurrencySettings",
+                    params=params,
+                    headers=headers,
+                    timeout=30.0
+                )
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    
+                    if data.get("success"):
+                        return {
+                            "success": True,
+                            "data": data.get("data", {})
+                        }
+                    else:
+                        return {
+                            "success": False,
+                            "error": data.get("message", "Failed to get currency settings")
+                        }
+                else:
+                    return {
+                        "success": False,
+                        "error": f"API error: HTTP {response.status_code}"
+                    }
+                    
+        except Exception as e:
+            return {
+                "success": False,
+                "error": f"Error getting currency settings: {str(e)}"
+            }

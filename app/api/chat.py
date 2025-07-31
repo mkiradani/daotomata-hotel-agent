@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import StreamingResponse
 
 from ..models import ChatRequest, ChatResponse, ChatMessage, ErrorResponse
-from ..services.chat_service import chat_service
+from ..services.simple_chat_service import chat_service
 from ..config import settings
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])

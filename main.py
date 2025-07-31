@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 
 from app.config import settings
 from app.api.chat import router as chat_router
-from app.api.chat_mcp import router as chat_mcp_router
+# from app.api.chat_mcp import router as chat_mcp_router  # Disabled due to import issues
 from app.api.hotel import router as hotel_router
 from app.api.webhook import router as webhook_router
 
@@ -112,7 +112,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(chat_router)
-app.include_router(chat_mcp_router)
+# app.include_router(chat_mcp_router)  # Disabled due to import issues
 app.include_router(hotel_router)
 app.include_router(webhook_router)
 

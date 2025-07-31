@@ -6,8 +6,8 @@ from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
 from datetime import datetime
 
-from agents import Runner, RunContextWrapper
-from agents.extensions.handoff_prompt import prompt_with_handoff_instructions
+from agents import Context, Result, Agent
+from openai import AsyncOpenAI
 
 from ..agents.hotel_agents import triage_agent
 from ..models import ChatRequest, ChatResponse, ChatMessage, MessageRole
@@ -34,6 +34,7 @@ class ChatService:
 
     def __init__(self):
         self.sessions: Dict[str, HotelContext] = {}
+        self.client = AsyncOpenAI(api_key=settings.openai_api_key)
 
     async def process_chat(self, request: ChatRequest) -> ChatResponse:
         """Process a chat request and return the agent's response."""
@@ -44,28 +45,36 @@ class ChatService:
             # Get hotel context
             hotel_context = await self._get_hotel_context(request, session_id)
 
-            # Prepare conversation input
-            conversation_input = await self._prepare_conversation_input(
-                request, hotel_context
+            # Create context for the agent
+            context = Context(
+                hotel_id=hotel_context.hotel_id,
+                hotel_name=hotel_context.hotel_name,
+                session_id=session_id,
+                user_message=request.message
             )
-
-            # Run the agent
-            result = await Runner.run(
-                triage_agent, conversation_input, context=hotel_context, max_turns=10
-            )
-
+            
+            # Process the message directly with the agent's function
+            result = await triage_agent.process_request(context)
+            
+            # Get the response text
+            if isinstance(result, Result):
+                final_message = result.value
+                agent_name = "Hotel Assistant"
+            else:
+                final_message = str(result) if result else "I apologize, but I couldn't process your request."
+                agent_name = "Hotel Assistant"
+            
             # Update conversation history
-            await self._update_conversation_history(
-                hotel_context, request.message, result.final_output
-            )
+            hotel_context.conversation_history.append({"role": "user", "content": request.message})
+            hotel_context.conversation_history.append({"role": "assistant", "content": final_message})
 
-            # Extract metadata from result
-            agent_used = self._extract_agent_used(result)
-            tools_used = self._extract_tools_used(result)
-            handoff_occurred = self._check_handoff_occurred(result)
+            # Extract metadata
+            agent_used = agent_name
+            tools_used = []  # TODO: Extract tools from response
+            handoff_occurred = False  # TODO: Check if handoff occurred
 
             return ChatResponse(
-                message=str(result.final_output),
+                message=final_message,
                 session_id=session_id,
                 agent_used=agent_used,
                 tools_used=tools_used,
@@ -137,74 +146,6 @@ class ChatService:
 
         return None
 
-    async def _prepare_conversation_input(
-        self, request: ChatRequest, context: HotelContext
-    ) -> List[Dict[str, Any]]:
-        """Prepare conversation input for the agent."""
-        messages = []
-
-        # Add system message with hotel context
-        system_message = self._create_system_message(context)
-        messages.append({"role": "system", "content": system_message})
-
-        # Add conversation history
-        messages.extend(context.conversation_history)
-
-        # Add current user message
-        messages.append({"role": "user", "content": request.message})
-
-        return messages
-
-    def _create_system_message(self, context: HotelContext) -> str:
-        """Create system message with hotel context."""
-        system_msg = "You are a helpful hotel assistant. "
-
-        if context.hotel_name:
-            system_msg += f"You work at {context.hotel_name}. "
-
-        if context.hotel_id:
-            system_msg += f"The hotel ID is {context.hotel_id}. "
-
-        system_msg += "Always be professional, friendly, and helpful. "
-        system_msg += "Use the available tools to provide accurate information. "
-        system_msg += (
-            "If you need specialized assistance, handoff to the appropriate agent."
-        )
-
-        return system_msg
-
-    async def _update_conversation_history(
-        self, context: HotelContext, user_message: str, assistant_response: str
-    ):
-        """Update conversation history."""
-        context.conversation_history.extend(
-            [
-                {"role": "user", "content": user_message},
-                {"role": "assistant", "content": assistant_response},
-            ]
-        )
-
-        # Keep only last 20 messages to prevent context overflow
-        if len(context.conversation_history) > 20:
-            context.conversation_history = context.conversation_history[-20:]
-
-    def _extract_agent_used(self, result) -> Optional[str]:
-        """Extract which agent was used from the result."""
-        # This would need to be implemented based on the actual result structure
-        # For now, return a placeholder
-        return "triage_agent"
-
-    def _extract_tools_used(self, result) -> List[str]:
-        """Extract which tools were used from the result."""
-        # This would need to be implemented based on the actual result structure
-        # For now, return empty list
-        return []
-
-    def _check_handoff_occurred(self, result) -> bool:
-        """Check if a handoff occurred during the conversation."""
-        # This would need to be implemented based on the actual result structure
-        # For now, return False
-        return False
 
     async def get_session_history(self, session_id: str) -> List[ChatMessage]:
         """Get conversation history for a session."""

@@ -7,7 +7,7 @@ from typing import Dict, Any, Optional
 import json
 
 from ..models import ChatRequest, ChatResponse
-from ..services.chat_service import chat_service
+from ..services.simple_chat_service import chat_service
 from ..services.chat_service_mcp import chat_service_mcp
 from ..services.chatwoot_service import chatwoot_service
 from ..config import settings

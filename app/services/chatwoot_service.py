@@ -10,14 +10,14 @@ from datetime import datetime
 
 from ..config import settings
 
-# Configure logger with enhanced debugging
+# Configure logger
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 # Add handler if not already present
 if not logger.handlers:
     handler = logging.StreamHandler()
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(funcName)s:%(lineno)d - %(message)s')
+    formatter = logging.Formatter('%(levelname)s:%(name)s: %(message)s')
     handler.setFormatter(formatter)
     logger.addHandler(handler)
 
@@ -57,7 +57,7 @@ class ChatwootService:
     def add_hotel_config(self, hotel_id: str, config: ChatwootConfig):
         """Add Chatwoot configuration for a specific hotel."""
         self.configs[hotel_id] = config
-        logger.info(f"🏨 Added Chatwoot config for hotel {hotel_id}: {config.base_url}")
+        logger.info(f"🏨 Chatwoot config added for hotel {hotel_id}")
     
     def get_hotel_config(self, hotel_id: str) -> Optional[ChatwootConfig]:
         """Get Chatwoot configuration for a hotel."""
@@ -107,10 +107,7 @@ class ChatwootService:
         }
         
         try:
-            logger.info(f"📤 Sending message to Chatwoot conversation {conversation_id} for hotel {hotel_id}")
-            logger.info(f"🌐 URL: {url}")
-            logger.info(f"🔑 Headers: api_access_token={config.api_access_token[:10]}...")
-            logger.info(f"📋 Payload: {json.dumps(payload, indent=2)}")
+            logger.info(f"📤 Sending to Chatwoot conv {conversation_id} ({'private' if private else 'public'})")
             
             response = await self.http_client.post(
                 url,
@@ -118,12 +115,9 @@ class ChatwootService:
                 headers=headers
             )
             
-            logger.info(f"📥 Chatwoot API Response Status: {response.status_code}")
-            
             if response.status_code == 200:
                 result = response.json()
-                logger.info(f"✅ Message sent successfully to conversation {conversation_id}")
-                logger.info(f"📄 Chatwoot Response: {json.dumps(result, indent=2)}")
+                logger.info(f"✅ Message sent (ID: {result.get('id')})")
                 
                 return {
                     "success": True,
@@ -135,10 +129,7 @@ class ChatwootService:
                 }
             else:
                 error_text = response.text
-                logger.error(f"❌ Failed to send message: {response.status_code}")
-                logger.error(f"📝 Error details: {error_text}")
-                logger.error(f"🌐 Failed URL: {url}")
-                logger.error(f"🔑 Failed with token: {config.api_access_token[:10]}...")
+                logger.error(f"❌ Message failed {response.status_code}: {error_text[:100]}")
                 
                 return {
                     "success": False,
@@ -149,7 +140,7 @@ class ChatwootService:
                 }
                 
         except httpx.TimeoutException:
-            logger.error(f"⏰ Timeout sending message to Chatwoot for hotel {hotel_id}")
+            logger.error(f"⏰ Timeout sending to Chatwoot hotel {hotel_id}")
             return {
                 "success": False,
                 "error": "Request timeout",
@@ -157,12 +148,14 @@ class ChatwootService:
                 "conversation_id": conversation_id
             }
         except Exception as e:
-            logger.error(f"💥 Unexpected error sending message: {str(e)}")
+            error_msg = str(e) or "Unknown error"
+            logger.error(f"💥 Send error: {error_msg}")
             return {
                 "success": False,
-                "error": f"Unexpected error: {str(e)}",
+                "error": f"Unexpected error: {error_msg}",
                 "hotel_id": hotel_id,
-                "conversation_id": conversation_id
+                "conversation_id": conversation_id,
+                "traceback": traceback.format_exc()
             }
     
     async def get_conversation(self, hotel_id: str, conversation_id: int) -> Dict[str, Any]:
@@ -186,15 +179,15 @@ class ChatwootService:
             
             if response.status_code == 200:
                 result = response.json()
-                logger.info(f"✅ Retrieved conversation {conversation_id} for hotel {hotel_id}")
+                logger.info(f"✅ Retrieved conv {conversation_id}")
                 return {
                     "success": True,
                     "conversation": result,
                     "hotel_id": hotel_id
                 }
             else:
-                error_text = await response.atext()
-                logger.error(f"❌ Failed to get conversation: {response.status_code} - {error_text}")
+                error_text = response.text
+                logger.error(f"❌ Get conv failed {response.status_code}: {error_text[:50]}")
                 return {
                     "success": False,
                     "error": f"Chatwoot API error: {response.status_code}",
@@ -202,7 +195,7 @@ class ChatwootService:
                 }
                 
         except Exception as e:
-            logger.error(f"💥 Error getting conversation: {str(e)}")
+            logger.error(f"💥 Get conv error: {str(e)}")
             return {
                 "success": False,
                 "error": f"Error: {str(e)}"
@@ -232,7 +225,7 @@ class ChatwootService:
             response = await self.http_client.post(url, json=payload, headers=headers)
             
             if response.status_code == 200:
-                logger.info(f"✅ Marked conversation {conversation_id} as resolved for hotel {hotel_id}")
+                logger.info(f"✅ Marked conv {conversation_id} resolved")
                 return {
                     "success": True,
                     "conversation_id": conversation_id,
@@ -240,8 +233,8 @@ class ChatwootService:
                     "hotel_id": hotel_id
                 }
             else:
-                error_text = await response.atext()
-                logger.error(f"❌ Failed to resolve conversation: {response.status_code} - {error_text}")
+                error_text = response.text
+                logger.error(f"❌ Resolve failed {response.status_code}: {error_text[:50]}")
                 return {
                     "success": False,
                     "error": f"Chatwoot API error: {response.status_code}",
@@ -249,11 +242,105 @@ class ChatwootService:
                 }
                 
         except Exception as e:
-            logger.error(f"💥 Error resolving conversation: {str(e)}")
+            logger.error(f"💥 Resolve error: {str(e)}")
             return {
                 "success": False,
                 "error": f"Error: {str(e)}"
             }
+    
+    async def mark_conversation_open(self, hotel_id: str, conversation_id: int) -> Dict[str, Any]:
+        """
+        Mark a conversation as open in Chatwoot for human agent assignment.
+        This will trigger automatic assignment to available agents.
+        """
+        config = self.get_hotel_config(hotel_id)
+        if not config:
+            return {
+                "success": False,
+                "error": f"No Chatwoot configuration found for hotel {hotel_id}"
+            }
+        
+        url = f"{config.base_url}/api/v1/accounts/{config.account_id}/conversations/{conversation_id}/toggle_status"
+        
+        headers = {
+            "Content-Type": "application/json",
+            "api_access_token": config.api_access_token
+        }
+        
+        payload = {
+            "status": "open"
+        }
+        
+        try:
+            logger.info(f"🔓 Marking conv {conversation_id} as open")
+            response = await self.http_client.post(url, json=payload, headers=headers)
+            
+            if response.status_code == 200:
+                result = response.json()
+                logger.info(f"✅ Conv {conversation_id} marked open")
+                return {
+                    "success": True,
+                    "conversation_id": conversation_id,
+                    "status": "open",
+                    "hotel_id": hotel_id,
+                    "response": result
+                }
+            else:
+                error_text = response.text
+                logger.error(f"❌ Mark open failed {response.status_code}: {error_text[:50]}")
+                return {
+                    "success": False,
+                    "error": f"Chatwoot API error: {response.status_code}",
+                    "error_details": error_text,
+                    "hotel_id": hotel_id,
+                    "conversation_id": conversation_id
+                }
+                
+        except Exception as e:
+            logger.error(f"💥 Mark open error: {str(e)}")
+            return {
+                "success": False,
+                "error": f"Error: {str(e)}",
+                "hotel_id": hotel_id,
+                "conversation_id": conversation_id
+            }
+    
+    async def send_private_note(
+        self,
+        hotel_id: str,
+        conversation_id: int,
+        content: str
+    ) -> Dict[str, Any]:
+        """
+        Send a private note to a Chatwoot conversation (only visible to agents).
+        This is a convenience method that calls send_message with private=True.
+        """
+        return await self.send_message(
+            hotel_id=hotel_id,
+            conversation_id=conversation_id,
+            content=content,
+            message_type="outgoing",
+            private=True
+        )
+    
+    async def get_conversation_status(self, hotel_id: str, conversation_id: int) -> Dict[str, Any]:
+        """Get current status of a conversation."""
+        conversation_result = await self.get_conversation(hotel_id, conversation_id)
+        
+        if conversation_result.get("success"):
+            conversation_data = conversation_result.get("conversation", {})
+            status = conversation_data.get("status", "unknown")
+            assignee = conversation_data.get("assignee")
+            
+            return {
+                "success": True,
+                "status": status,
+                "assignee": assignee,
+                "conversation_id": conversation_id,
+                "hotel_id": hotel_id
+            }
+        else:
+            return conversation_result
 
 
 # Global Chatwoot service instance
@@ -262,22 +349,22 @@ chatwoot_service = ChatwootService()
 
 async def initialize_chatwoot_configs():
     """Initialize Chatwoot configurations for all hotels from Directus."""
-    logger.info("🏨 Initializing Chatwoot configurations for all hotels...")
+    logger.info("🏨 Initializing Chatwoot configs...")
     
     try:
         from .directus_service import directus_service
         
         # Get all hotels with Chatwoot configurations
         hotels_with_chatwoot = await directus_service.get_hotels_with_chatwoot_config()
-        logger.info(f"🔍 Found {len(hotels_with_chatwoot)} hotels with potential Chatwoot config")
+        logger.info(f"🔍 Found {len(hotels_with_chatwoot)} hotels with Chatwoot config")
         
         for hotel in hotels_with_chatwoot:
             hotel_id = hotel.get("id")
             
             # Read Chatwoot fields directly from the hotel object
             base_url = hotel.get("chatwoot_base_url")
-            # Check both possible field names for API token
-            api_token = hotel.get("chatwoot_api_token") or hotel.get("chatwoot_api_access_token")
+            # Use the user API token (not platform token)
+            api_token = hotel.get("chatwoot_api_token")
             account_id = hotel.get("chatwoot_account_id")
             
             # Validate required fields
@@ -291,16 +378,9 @@ async def initialize_chatwoot_configs():
                 
                 # Convert hotel_id to string when adding config
                 chatwoot_service.add_hotel_config(str(hotel_id), config)
-                logger.info(f"✅ Initialized Chatwoot config for hotel {hotel_id}")
-                logger.info(f"   Base URL: {config.base_url}")
-                logger.info(f"   Account ID: {config.account_id}")
-                logger.info(f"   Token: {config.api_access_token[:10]}...")
+                logger.info(f"✅ Hotel {hotel_id} config initialized")
             else:
-                logger.warning(f"⚠️ Incomplete Chatwoot config for hotel {hotel_id}")
-                logger.warning(f"   Base URL: {base_url or 'NOT SET'}")
-                logger.warning(f"   API Token: {'SET' if api_token else 'NOT SET'}")
-                logger.warning(f"   Account ID: {account_id or 'NOT SET'}")
-                logger.warning(f"   Raw hotel data: {json.dumps(hotel, indent=2)}")
+                logger.warning(f"⚠️ Hotel {hotel_id} has incomplete config")
                 
     except Exception as e:
         logger.error(f"❌ Failed to initialize Chatwoot configs: {str(e)}")

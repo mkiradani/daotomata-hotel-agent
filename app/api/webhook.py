@@ -12,13 +12,9 @@ from ..services.chat_service_mcp import chat_service_mcp
 from ..services.chatwoot_service import chatwoot_service
 from ..config import settings
 
-# Configure webhook logger with enhanced debugging
+# Configure webhook logger
 logger = logging.getLogger(__name__)
-handler = logging.StreamHandler()
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(funcName)s:%(lineno)d - %(message)s')
-handler.setFormatter(formatter)
-logger.addHandler(handler)
-logger.setLevel(logging.DEBUG)  # Changed to DEBUG for more detailed logs
+logger.setLevel(logging.INFO)
 
 router = APIRouter(prefix="/webhook", tags=["webhooks"])
 
@@ -47,10 +43,7 @@ async def chatwoot_webhook(
     """
     
     # Enhanced logging for debugging
-    logger.info(f"🔔 Received Chatwoot webhook for hotel {hotel_id}")
-    logger.info(f"📋 Full payload: {json.dumps(payload, indent=2)}")
-    logger.info(f"🏨 Hotel ID from URL: {hotel_id}")
-    logger.info(f"🔧 Using MCP: {use_mcp}")
+    logger.info(f"🔔 Chatwoot webhook: hotel {hotel_id}, MCP={use_mcp}")
     
     try:
         # Validate and extract Chatwoot payload data
@@ -70,16 +63,15 @@ async def chatwoot_webhook(
         contact_info = webhook_data["contact_info"]
         sender_info = webhook_data["sender_info"]
         
-        logger.info(f"📝 Processing message from {contact_info['name']} in conversation {conversation_id}")
-        logger.info(f"💬 Message content: '{message_content}'")
-        logger.info(f"👤 Contact info: {json.dumps(contact_info, indent=2)}")
-        logger.info(f"📞 Sender info: {json.dumps(sender_info, indent=2)}")
+        logger.info(f"📝 Processing: {contact_info['name']} in conv {conversation_id}")
+        logger.info(f"💬 Message: '{message_content[:50]}{'...' if len(message_content) > 50 else ''}'")
         
-        # Create chat request with proper context
+        # Create chat request with proper context including conversation_id for HITL
         chat_request = ChatRequest(
             message=message_content,
             session_id=f"chatwoot_{conversation_id}",
             hotel_id=hotel_id,
+            conversation_id=conversation_id,  # Add conversation_id for HITL integration
             user_context={
                 "platform": "chatwoot",
                 "conversation_id": conversation_id,
@@ -92,7 +84,7 @@ async def chatwoot_webhook(
         )
         
         # Process through appropriate chat service with automatic fallback
-        logger.info(f"📨 Sending chat request: {json.dumps(chat_request.dict(), indent=2)}")
+        # Removed verbose chat request logging
         
         response = None
         if use_mcp:
@@ -101,23 +93,17 @@ async def chatwoot_webhook(
                 response = await chat_service_mcp.process_chat(chat_request)
                 logger.info(f"✅ MCP processing successful")
             except Exception as mcp_error:
-                logger.error(f"❌ MCP chat service failed: {str(mcp_error)}")
-                logger.info(f"🔄 Falling back to simple chat service")
+                logger.error(f"❌ MCP failed: {str(mcp_error)[:50]}")
+                logger.info(f"🔄 Fallback to simple service")
                 response = await chat_service.process_chat(chat_request)
         else:
             logger.info(f"🤖 Processing with simple chat service")
             response = await chat_service.process_chat(chat_request)
         
-        logger.info(f"🎯 Chat service response received:")
-        logger.info(f"   - Message: {response.message}")
-        logger.info(f"   - Session ID: {response.session_id}")
-        logger.info(f"   - Agent used: {response.agent_used}")
-        
-        logger.info(f"✅ Generated response: {response.message[:100]}...")
+        logger.info(f"🎯 Response: {response.agent_used} | {len(response.message)} chars")
         
         # Send response back to Chatwoot asynchronously
-        logger.info(f"📤 Adding background task to send response to Chatwoot")
-        logger.info(f"   Conversation ID type: {type(conversation_id)} value: {conversation_id}")
+        logger.info(f"📤 Adding background task for conv {conversation_id}")
         
         background_tasks.add_task(
             _send_chatwoot_response,
@@ -126,7 +112,7 @@ async def chatwoot_webhook(
             response.message,
             contact_info["name"]
         )
-        logger.info(f"✅ Background task added successfully")
+        logger.info(f"✅ Background task added")
         
         # Return immediate status to webhook caller
         return {
@@ -142,9 +128,7 @@ async def chatwoot_webhook(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"💥 Error processing Chatwoot webhook: {str(e)}")
-        import traceback
-        logger.error(f"📚 Traceback: {traceback.format_exc()}")
+        logger.error(f"💥 Webhook error: {str(e)[:100]}")
         
         raise HTTPException(
             status_code=500,
@@ -303,10 +287,7 @@ async def _send_chatwoot_response(
             logger.error(f"   Error details: {result.get('error_details')}")
             
     except Exception as e:
-        logger.error(f"💥 Exception in _send_chatwoot_response: {str(e)}")
-        logger.error(f"   Exception type: {type(e).__name__}")
-        import traceback
-        logger.error(f"📚 Full traceback:\n{traceback.format_exc()}")
+        logger.error(f"💥 Send exception: {type(e).__name__}: {str(e)[:100]}")
     
     finally:
         logger.info(f"🎬 BACKGROUND TASK COMPLETED for conversation {conversation_id}")

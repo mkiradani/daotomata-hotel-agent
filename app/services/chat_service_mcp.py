@@ -63,51 +63,108 @@ class ChatServiceMCP:
             # Get or create session
             session_id = request.session_id or str(uuid.uuid4())
             
-            logger.info(f"🎯 Processing chat request - Session ID: {session_id}, Hotel ID: {request.hotel_id}")
-            logger.info(f"📝 User message: {request.message[:100]}{'...' if len(request.message) > 100 else ''}")
+            logger.info(f"🎯 Chat: {session_id} | Hotel {request.hotel_id} | {len(request.message)} chars")
 
             # Get hotel context
             hotel_context = await self._get_hotel_context(request, session_id)
             
-            logger.info(f"📊 Session context - History length: {len(hotel_context.conversation_history)}, Created: {hotel_context.created_at}")
+            # Session context loaded
 
             # Prepare conversation input
             conversation_input = await self._prepare_conversation_input(
                 request, hotel_context
             )
             
-            logger.info(f"💬 Prepared conversation input with {len(conversation_input)} messages")
+            logger.info(f"💬 Prepared {len(conversation_input)} messages")
 
             # Store user message in history BEFORE calling agent
             # This ensures we don't lose the user's message if agent fails
             await self._store_user_message(hotel_context, request.message)
-            logger.info(f"📝 Stored user message in history - Length: {len(hotel_context.conversation_history)}")
+            # User message stored
 
             # Get triage agent with MCP
             triage_agent = await self._get_triage_agent()
 
             # Run the agent
-            logger.info(f"🤖 Running agent with context for hotel {hotel_context.hotel_id}")
+            logger.info(f"🤖 Running agent for hotel {hotel_context.hotel_id}")
             result = await Runner.run(
                 triage_agent, conversation_input, context=hotel_context, max_turns=10
             )
             
-            logger.info(f"✅ Agent completed successfully - Response length: {len(str(result.final_output))}")
+            logger.info(f"✅ Agent completed - {len(str(result.final_output))} chars")
 
-            # Update conversation history with assistant response
-            await self._store_assistant_response(hotel_context, str(result.final_output))
+            # HITL INTEGRATION: Evaluate response confidence and handle escalation
+            ai_response = str(result.final_output)
+            user_question = request.message
             
-            logger.info(f"📚 Updated conversation history - Final length: {len(hotel_context.conversation_history)}")
+            # Import HITL manager
+            from .hitl_manager import hitl_manager
+            
+            # Check if HITL is enabled
+            if hitl_manager.is_hitl_enabled():
+                logger.info("🤖 HITL evaluation...")
+                
+                # Build context for evaluation
+                conversation_context = "\n".join([
+                    f"{msg.get('role', 'unknown')}: {msg.get('content', '')[:200]}"
+                    for msg in hotel_context.conversation_history[-5:]  # Last 5 messages for context
+                ])
+                
+                # Get hotel_id as string for HITL
+                hotel_id_str = str(hotel_context.hotel_id) if hotel_context.hotel_id else "unknown"
+                
+                # Get conversation_id from request (if available)
+                conversation_id = getattr(request, 'conversation_id', None)
+                
+                if conversation_id:
+                    try:
+                        # Evaluate and handle response with HITL
+                        hitl_result = await hitl_manager.evaluate_and_handle_response(
+                            hotel_id=hotel_id_str,
+                            conversation_id=conversation_id,
+                            ai_response=ai_response,
+                            user_question=user_question,
+                            context=conversation_context
+                        )
+                        
+                        action = hitl_result.get('action_taken', 'unknown')
+                        score = hitl_result.get('confidence_score', 0)
+                        logger.info(f"🔍 HITL: {action} | Score: {score:.2f}")
+                        
+                        # If escalated, modify response to inform user
+                        if hitl_result.get("should_escalate", False):
+                            escalation_message = (
+                                "He transferido tu consulta a uno de nuestros agentes humanos "
+                                "para brindarte la mejor asistencia posible. Un miembro de nuestro "
+                                "equipo se pondrá en contacto contigo muy pronto.\n\n"
+                                f"Mientras tanto, aquí tienes la información que pude recopilar:\n\n{ai_response}"
+                            )
+                            ai_response = escalation_message
+                            logger.info("🚨 Response modified for escalation")
+                        
+                    except Exception as hitl_error:
+                        logger.error(f"❌ HITL failed: {str(hitl_error)[:50]}")
+                        # Continue with normal flow if HITL fails
+                else:
+                    logger.warning("⚠️ No conv_id, skipping HITL")
+            else:
+                # HITL disabled
+                pass
+
+            # Update conversation history with assistant response (potentially modified)
+            await self._store_assistant_response(hotel_context, ai_response)
+            
+            # History updated
 
             # Extract metadata from result
             agent_used = self._extract_agent_used(result)
             tools_used = self._extract_tools_used(result)
             handoff_occurred = self._check_handoff_occurred(result)
             
-            logger.info(f"🔧 Agent metadata - Used: {agent_used}, Tools: {tools_used}, Handoff: {handoff_occurred}")
+            logger.info(f"🔧 Agent: {agent_used} | Tools: {len(tools_used)} | Handoff: {handoff_occurred}")
 
             return ChatResponse(
-                message=str(result.final_output),
+                message=ai_response,  # Use potentially modified response
                 session_id=session_id,
                 agent_used=agent_used,
                 tools_used=tools_used,
@@ -116,9 +173,8 @@ class ChatServiceMCP:
 
         except Exception as e:
             # Enhanced error logging for MCP debugging
-            logger.error(f"❌ Error processing chat with MCP: {str(e)}")
-            logger.error(f"📝 Request details - session_id: {request.session_id}, hotel_id: {request.hotel_id}, message: {request.message[:100]}...")
-            logger.error(f"🔍 Error type: {type(e).__name__}")
+            logger.error(f"❌ MCP error: {type(e).__name__}: {str(e)[:100]}")
+            logger.error(f"📝 Session: {request.session_id} | Hotel: {request.hotel_id}")
             
             # Get or create session context for error handling
             session_id = request.session_id or str(uuid.uuid4())
@@ -128,7 +184,7 @@ class ChatServiceMCP:
                 # Store user message if not already stored
                 if not any(msg.get("content") == request.message for msg in hotel_context.conversation_history):
                     await self._store_user_message(hotel_context, request.message)
-                    logger.info(f"📝 Stored user message in error handler - Length: {len(hotel_context.conversation_history)}")
+                    # Error message stored
                 
                 logger.error(f"💾 Session state - History: {len(hotel_context.conversation_history)} messages, Last activity: {hotel_context.last_activity}")
             except Exception as ctx_error:

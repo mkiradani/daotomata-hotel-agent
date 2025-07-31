@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 from agents import Runner, RunContextWrapper
 from agents.extensions.handoff_prompt import prompt_with_handoff_instructions
 
-from ..agents.hotel_agents_mcp import create_triage_agent
+from ..agents.hotel_agents_mcp import create_triage_agent, get_directus_mcp_server
 from ..models import ChatRequest, ChatResponse, ChatMessage, MessageRole
 from ..config import settings
 
@@ -25,6 +25,9 @@ class HotelContext:
 
     hotel_id: Optional[str] = None
     hotel_name: Optional[str] = None
+    hotel_phone: Optional[str] = None
+    hotel_email: Optional[str] = None
+    hotel_support_hours: Optional[str] = None
     user_id: Optional[str] = None
     session_id: Optional[str] = None
     conversation_history: List[Dict[str, Any]] = None
@@ -46,6 +49,7 @@ class ChatServiceMCP:
     def __init__(self):
         self.sessions: Dict[str, HotelContext] = {}
         self._triage_agent = None
+        self._hotel_info_cache: Dict[str, Dict[str, Any]] = {}  # Cache hotel info including contacts
 
     async def _get_triage_agent(self):
         """Get or create triage agent with MCP integration."""
@@ -114,6 +118,7 @@ class ChatServiceMCP:
             # Enhanced error logging for MCP debugging
             logger.error(f"❌ Error processing chat with MCP: {str(e)}")
             logger.error(f"📝 Request details - session_id: {request.session_id}, hotel_id: {request.hotel_id}, message: {request.message[:100]}...")
+            logger.error(f"🔍 Error type: {type(e).__name__}")
             
             # Get or create session context for error handling
             session_id = request.session_id or str(uuid.uuid4())
@@ -135,7 +140,26 @@ class ChatServiceMCP:
 
             # Check if error is MCP-related
             error_msg = str(e).lower()
-            if "mcp" in error_msg or "connection" in error_msg or "server" in error_msg:
+            error_type = type(e).__name__
+            
+            # More specific error categorization
+            if "mcp" in error_msg or "connection" in error_msg or "server" in error_msg or "directus" in error_msg:
+                logger.warning("🔧 Data system error detected")
+                error_category = "data_system"
+            elif "timeout" in error_msg or "timed out" in error_msg:
+                logger.warning("⏱️ Timeout error detected")
+                error_category = "timeout"
+            elif "authentication" in error_msg or "unauthorized" in error_msg or "forbidden" in error_msg:
+                logger.warning("🔐 Authentication error detected")
+                error_category = "auth"
+            elif "rate" in error_msg and "limit" in error_msg:
+                logger.warning("🚦 Rate limit error detected")
+                error_category = "rate_limit"
+            else:
+                logger.warning(f"⚠️ General error detected: {error_type}")
+                error_category = "general"
+            
+            if error_category in ["data_system", "timeout"]:
                 logger.warning("🔧 MCP-related error detected - attempting to reset MCP connection")
                 try:
                     from ..agents.hotel_agents_mcp import close_directus_mcp_server
@@ -144,9 +168,23 @@ class ChatServiceMCP:
                 except Exception as reset_error:
                     logger.error(f"⚠️ Failed to reset MCP connection: {reset_error}")
                 
-                error_response = "I'm having trouble accessing the hotel's live data system. Please try again in a moment, or contact our front desk for immediate assistance."
+                # Get contact info from context or use defaults
+                phone = hotel_context.hotel_phone if hotel_context and hotel_context.hotel_phone else "+1 (555) 123-4567"
+                email = hotel_context.hotel_email if hotel_context and hotel_context.hotel_email else "info@hotel.com"
+                hours = hotel_context.hotel_support_hours if hotel_context and hotel_context.hotel_support_hours else "24/7"
+                
+                error_response = f"I'm having trouble accessing the hotel's information system at the moment. Please try your question again, or you can reach our front desk at {phone} or email us at {email} for immediate assistance."
+            elif error_category == "auth":
+                phone = hotel_context.hotel_phone if hotel_context and hotel_context.hotel_phone else "+1 (555) 123-4567"
+                error_response = f"I'm having trouble verifying access to the hotel system. Please try again, or contact our front desk at {phone} for assistance."
+            elif error_category == "rate_limit":
+                phone = hotel_context.hotel_phone if hotel_context and hotel_context.hotel_phone else "+1 (555) 123-4567"
+                error_response = f"Our system is experiencing high demand. Please wait a moment and try again, or contact our front desk at {phone} for immediate help."
             else:
-                error_response = "I apologize, but I'm experiencing some technical difficulties. Please try again in a moment, or contact our front desk for immediate assistance."
+                phone = hotel_context.hotel_phone if hotel_context and hotel_context.hotel_phone else "+1 (555) 123-4567"
+                email = hotel_context.hotel_email if hotel_context and hotel_context.hotel_email else "info@hotel.com"
+                hours = hotel_context.hotel_support_hours if hotel_context and hotel_context.hotel_support_hours else "24/7"
+                error_response = f"I apologize for the inconvenience. I'm unable to process your request right now. Please try again shortly, or contact our front desk at {phone} or email us at {email}. We're here to help {hours}."
 
             # Store error response in history if context available
             if hotel_context:
@@ -178,10 +216,10 @@ class ChatServiceMCP:
                 hotel_id=hotel_id, session_id=session_id, conversation_history=[]
             )
 
-            # Get hotel name from Directus if we have hotel_id
+            # Get hotel info from Directus if we have hotel_id
             if hotel_id:
-                # The agent will get hotel name via MCP tools
-                # For now just store the ID
+                # Load hotel information including contacts
+                await self._load_hotel_info(hotel_id, self.sessions[session_id])
                 logger.info(f"🏨 Hotel context set for hotel ID: {hotel_id}")
         else:
             logger.info(f"🔄 Using existing session context - Session ID: {session_id}")
@@ -196,6 +234,84 @@ class ChatServiceMCP:
                 setattr(context, key, value)
 
         return context
+    
+    async def _load_hotel_info(self, hotel_id: str, context: HotelContext):
+        """Load hotel information from Directus including contact methods."""
+        try:
+            # Check cache first
+            if hotel_id in self._hotel_info_cache:
+                cached_info = self._hotel_info_cache[hotel_id]
+                context.hotel_name = cached_info.get("name")
+                context.hotel_phone = cached_info.get("phone")
+                context.hotel_email = cached_info.get("email")
+                context.hotel_support_hours = cached_info.get("support_hours", "24/7")
+                logger.info(f"✅ Loaded hotel info from cache for hotel {hotel_id}")
+                return
+            
+            # Get MCP server
+            mcp_server = await get_directus_mcp_server()
+            
+            # Get hotel basic info
+            hotel_result = await mcp_server.call_tool(
+                "mcp__directus__read-items",
+                {
+                    "collection": "hotels",
+                    "query": {
+                        "filter": {"id": {"_eq": int(hotel_id)}},
+                        "fields": ["id", "name", "contact_email", "contact_phone_calls"],
+                        "limit": 1
+                    }
+                }
+            )
+            
+            if hotel_result and len(hotel_result) > 0:
+                hotel_data = hotel_result[0]
+                context.hotel_name = hotel_data.get("name")
+                
+                # Get contact methods for more specific contacts
+                contact_result = await mcp_server.call_tool(
+                    "mcp__directus__read-items",
+                    {
+                        "collection": "contact_methods",
+                        "query": {
+                            "filter": {"hotel_id": {"_eq": int(hotel_id)}},
+                            "fields": ["contact_type", "contact_identifier", "name"]
+                        }
+                    }
+                )
+                
+                # Process contact methods
+                primary_phone = hotel_data.get("contact_phone_calls")
+                primary_email = hotel_data.get("contact_email")
+                
+                # Look for specific contact types
+                for contact in contact_result:
+                    if contact["contact_type"] == "phone" and contact["name"].lower() == "reception":
+                        primary_phone = contact["contact_identifier"]
+                    elif contact["contact_type"] == "email" and contact["name"].lower() == "reception":
+                        primary_email = contact["contact_identifier"]
+                
+                context.hotel_phone = primary_phone
+                context.hotel_email = primary_email
+                context.hotel_support_hours = "24/7"  # Default, could be enhanced with guest_services data
+                
+                # Cache the info
+                self._hotel_info_cache[hotel_id] = {
+                    "name": context.hotel_name,
+                    "phone": context.hotel_phone,
+                    "email": context.hotel_email,
+                    "support_hours": context.hotel_support_hours,
+                    "contacts": contact_result  # Store all contacts for future use
+                }
+                
+                logger.info(f"✅ Loaded hotel info from Directus for {context.hotel_name}")
+                
+        except Exception as e:
+            logger.error(f"❌ Error loading hotel info: {e}")
+            # Set defaults if loading fails
+            context.hotel_phone = "+1 (555) 123-4567"
+            context.hotel_email = "info@hotel.com"
+            context.hotel_support_hours = "24/7"
 
     async def _prepare_conversation_input(
         self, request: ChatRequest, context: HotelContext

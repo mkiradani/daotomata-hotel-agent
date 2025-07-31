@@ -1,0 +1,17 @@
+{
+  "hotel_1": {
+    "message": "The hotel is called **Maison Demo**. Unfortunately, I don't have access to the hotel's description at the moment. If you need more detailed information, please feel free to ask!",
+    "session_id": "test_hotel_1_1753944879",
+    "agent_used": "triage_agent_mcp",
+    "tools_used": [],
+    "handoff_occurred": false
+  },
+  "hotel_2": {
+    "message": "The name of the hotel is **Baberrih Hotel**. Unfortunately, I don't have access to the full description at the moment. Is there anything else I can assist you with?",
+    "session_id": "test_hotel_2_1753944915",
+    "agent_used": "triage_agent_mcp",
+    "tools_used": [],
+    "handoff_occurred": false
+  },
+  "identical": false
+}

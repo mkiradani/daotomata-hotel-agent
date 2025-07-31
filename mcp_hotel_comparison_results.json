@@ -1,0 +1,71 @@
+{
+  "hotel_1": {
+    "general_info": {
+      "hotel_id": "1",
+      "error": "The api_key client option must be set either by passing api_key to the client or by setting the OPENAI_API_KEY environment variable",
+      "response": null,
+      "tools_used": []
+    },
+    "specific_queries": {
+      "hotel_basic_info": {
+        "query": "What is the exact name and description of this hotel from Directus?",
+        "response": null,
+        "error": "The api_key client option must be set either by passing api_key to the client or by setting the OPENAI_API_KEY environment variable",
+        "success": false
+      },
+      "hotel_amenities": {
+        "query": "List all amenities available at this hotel from the Directus database.",
+        "response": null,
+        "error": "The api_key client option must be set either by passing api_key to the client or by setting the OPENAI_API_KEY environment variable",
+        "success": false
+      },
+      "hotel_rooms": {
+        "query": "Show me all room types available at this hotel with their details.",
+        "response": null,
+        "error": "The api_key client option must be set either by passing api_key to the client or by setting the OPENAI_API_KEY environment variable",
+        "success": false
+      },
+      "hotel_location": {
+        "query": "What is the address and location information for this hotel?",
+        "response": null,
+        "error": "The api_key client option must be set either by passing api_key to the client or by setting the OPENAI_API_KEY environment variable",
+        "success": false
+      }
+    }
+  },
+  "hotel_2": {
+    "general_info": {
+      "hotel_id": "2",
+      "error": "The api_key client option must be set either by passing api_key to the client or by setting the OPENAI_API_KEY environment variable",
+      "response": null,
+      "tools_used": []
+    },
+    "specific_queries": {
+      "hotel_basic_info": {
+        "query": "What is the exact name and description of this hotel from Directus?",
+        "response": null,
+        "error": "The api_key client option must be set either by passing api_key to the client or by setting the OPENAI_API_KEY environment variable",
+        "success": false
+      },
+      "hotel_amenities": {
+        "query": "List all amenities available at this hotel from the Directus database.",
+        "response": null,
+        "error": "The api_key client option must be set either by passing api_key to the client or by setting the OPENAI_API_KEY environment variable",
+        "success": false
+      },
+      "hotel_rooms": {
+        "query": "Show me all room types available at this hotel with their details.",
+        "response": null,
+        "error": "The api_key client option must be set either by passing api_key to the client or by setting the OPENAI_API_KEY environment variable",
+        "success": false
+      },
+      "hotel_location": {
+        "query": "What is the address and location information for this hotel?",
+        "response": null,
+        "error": "The api_key client option must be set either by passing api_key to the client or by setting the OPENAI_API_KEY environment variable",
+        "success": false
+      }
+    }
+  },
+  "timestamp": "56275.788218416"
+}

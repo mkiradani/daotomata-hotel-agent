@@ -1,0 +1,54 @@
+{
+  "hotel_1": {
+    "specific_query": {
+      "tools_used": [],
+      "response_preview": "Here is the raw data returned for the hotel with ID 1:\n\n```json\n{\n  \"id\": 1,\n  \"status\": \"draft\",\n  \"user_created\": \"7195fa28-875f-48e4-8439-090bcc0f0122\",\n  \"date_created\": \"2025-07-02T15:37:38.940Z\"",
+      "has_mcp_tools": false
+    },
+    "hotel_details": {
+      "tools_used": [
+        "check_availability"
+      ],
+      "response_preview": "### Hotel Information\n\n- **Name:** Maison Demo\n- **Domain:** [maisondemo.com](http://maisondemo.com)\n- **Location:** Latitude 31.6268, Longitude -9.6727\n- **Contact Email:** info@maisondemo.com\n- **Co",
+      "has_mcp_tools": true
+    },
+    "amenities": {
+      "tools_used": [],
+      "response_preview": "It looks like I don't have permission to access the hotel amenities information directly. Would you like me to connect you with a specialist who can help with this, or is there anything else I can ass",
+      "has_mcp_tools": false
+    },
+    "rooms": {
+      "tools_used": [
+        "check_availability"
+      ],
+      "response_preview": "It seems that I don't have access to the specific room details such as room numbers and prices. However, I can hand you over to our Booking Specialist who can assist you with room availability, prices",
+      "has_mcp_tools": true
+    }
+  },
+  "hotel_2": {
+    "specific_query": {
+      "tools_used": [],
+      "response_preview": "Here's the raw data for hotel ID 2:\n\n```json\n{\n  \"id\": 2,\n  \"status\": \"draft\",\n  \"user_created\": \"7195fa28-875f-48e4-8439-090bcc0f0122\",\n  \"date_created\": \"2025-07-02T17:47:21.010Z\",\n  \"user_updated\":",
+      "has_mcp_tools": false
+    },
+    "hotel_details": {
+      "tools_used": [
+        "check_availability"
+      ],
+      "response_preview": "Here is the detailed information about Baberrih Hotel:\n\n- **Name**: Baberrih Hotel\n- **Domain**: [baberrih.ma](http://baberrih.ma)\n- **Status**: Draft\n- **Contact Email**: [reception@baberrih.ma](mail",
+      "has_mcp_tools": true
+    },
+    "amenities": {
+      "tools_used": [],
+      "response_preview": "I've transferred your request to our Guest Services team. They will assist you further with detailed information about our hotel amenities. Thank you for your patience!",
+      "has_mcp_tools": false
+    },
+    "rooms": {
+      "tools_used": [
+        "check_availability"
+      ],
+      "response_preview": "It seems I don't have access to the specific room numbers and prices. Let's connect you with our Booking Specialist who can assist you further with room availability and pricing. One moment, please.",
+      "has_mcp_tools": true
+    }
+  }
+}

@@ -7,16 +7,21 @@ ENV PYTHONPATH=/app
 
 WORKDIR /app
 
-# Install system dependencies
+# Install system dependencies including Node.js for MCP
 RUN apt-get update && apt-get install -y \
     gcc \
     curl \
+    && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+    && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for better caching
 COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Pre-install MCP package to cache it during build
+RUN npm install -g @directus/content-mcp@latest
 
 # Copy application code
 COPY . .

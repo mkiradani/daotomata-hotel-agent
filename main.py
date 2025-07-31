@@ -45,6 +45,17 @@ async def lifespan(app: FastAPI):
     print(f"🤖 OpenAI Model: {settings.openai_model}")
     print(f"🏢 Current Domain: {settings.current_domain or 'Not set'}")
 
+    # Validate MCP requirements
+    import subprocess
+    try:
+        result = subprocess.run(["npx", "--version"], capture_output=True, text=True, timeout=5)
+        if result.returncode == 0:
+            print(f"✅ MCP requirements available: npx {result.stdout.strip()}")
+        else:
+            print("⚠️ Warning: npx not available, MCP will use fallback")
+    except Exception as e:
+        print(f"⚠️ Warning: Could not validate MCP requirements: {e}")
+
     # Initialize Chatwoot configurations for all hotels
     try:
         await initialize_chatwoot_configs()

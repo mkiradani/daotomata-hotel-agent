@@ -91,14 +91,21 @@ async def chatwoot_webhook(
             }
         )
         
-        # Process through appropriate chat service
+        # Process through appropriate chat service with automatic fallback
         logger.info(f"📨 Sending chat request: {json.dumps(chat_request.dict(), indent=2)}")
         
+        response = None
         if use_mcp:
-            logger.info(f"🤖 Processing with MCP-enabled chat service")
-            response = await chat_service_mcp.process_chat(chat_request)
+            try:
+                logger.info(f"🤖 Processing with MCP-enabled chat service")
+                response = await chat_service_mcp.process_chat(chat_request)
+                logger.info(f"✅ MCP processing successful")
+            except Exception as mcp_error:
+                logger.error(f"❌ MCP chat service failed: {str(mcp_error)}")
+                logger.info(f"🔄 Falling back to simple chat service")
+                response = await chat_service.process_chat(chat_request)
         else:
-            logger.info(f"🤖 Processing with standard chat service")
+            logger.info(f"🤖 Processing with simple chat service")
             response = await chat_service.process_chat(chat_request)
         
         logger.info(f"🎯 Chat service response received:")

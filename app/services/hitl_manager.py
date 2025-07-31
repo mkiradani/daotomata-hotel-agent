@@ -11,11 +11,11 @@ from ..config import settings
 
 # Configure logger
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 if not logger.handlers:
     handler = logging.StreamHandler()
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(funcName)s:%(lineno)d - %(message)s')
+    formatter = logging.Formatter('%(levelname)s:%(name)s: %(message)s')
     handler.setFormatter(formatter)
     logger.addHandler(handler)
 
@@ -63,11 +63,11 @@ class HITLManager:
         Returns:
             Dict with decision, confidence info, and escalation result if applicable
         """
-        logger.info(f"🤖 Evaluating response for hotel {hotel_id}, conversation {conversation_id}")
+        logger.info(f"🤖 HITL evaluating hotel {hotel_id}, conv {conversation_id}")
 
-        # Use configured threshold if not provided
+        # Use configured threshold if not provided (lowered default threshold)
         if confidence_threshold is None:
-            confidence_threshold = getattr(settings, 'hitl_confidence_threshold', 0.7)
+            confidence_threshold = getattr(settings, 'hitl_confidence_threshold', 0.65)  # Lowered from 0.7 to 0.65
 
         # Evaluate response confidence
         confidence_result = await confidence_evaluator.evaluate_response_confidence(
@@ -90,7 +90,7 @@ class HITLManager:
 
         # If escalation is needed, perform it
         if confidence_result.should_escalate:
-            logger.warning(f"🚨 Low confidence detected "f"({confidence_result.confidence_score:.2f} < {confidence_threshold})")
+            logger.warning(f"🚨 ESCALATING: {confidence_result.confidence_score:.2f} < {confidence_threshold}")
 
             escalation_result = await self._escalate_to_human(
                 hotel_id=hotel_id,
@@ -104,7 +104,7 @@ class HITLManager:
             result["action_taken"] = "escalated_to_human"
 
         else:
-            logger.info(f"✅ High confidence ({confidence_result.confidence_score:.2f} >= {confidence_threshold}), proceeding with AI response")
+            logger.info(f"✅ PROCEEDING: {confidence_result.confidence_score:.2f} >= {confidence_threshold}")
             result["action_taken"] = "send_ai_response"
 
         return result
@@ -133,7 +133,7 @@ class HITLManager:
         escalation_time = datetime.now().isoformat()
 
         try:
-            logger.info(f"🔀 Escalating conversation {conversation_id} to human agent...")
+            logger.info(f"🔀 Escalating conv {conversation_id}...")
 
             # Step 1: Change conversation status to 'open' to trigger auto-assignment
             status_result = await chatwoot_service.mark_conversation_open(
@@ -142,7 +142,7 @@ class HITLManager:
             )
 
             if not status_result.get("success"):
-                logger.error(f"❌ Failed to change conversation status: {status_result}")
+                logger.error(f"❌ Failed to mark as open: {status_result.get('error', 'Unknown error')}")
                 return EscalationResult(
                     success=False,
                     reason="Failed to change conversation status",
@@ -169,7 +169,7 @@ class HITLManager:
             # Step 3: Record escalation
             self._record_escalation(hotel_id, conversation_id, confidence_result)
 
-            logger.info(f"✅ Successfully escalated conversation {conversation_id}")
+            logger.info(f"✅ Escalated conv {conversation_id} successfully")
 
             return EscalationResult(
                 success=True,
@@ -248,7 +248,7 @@ Por favor, revisa la conversación y proporciona una respuesta adecuada al clien
         self.escalation_history[hotel_id].append(escalation_record)
         self.escalation_count += 1
 
-        logger.info(f"📊 Recorded escalation #{self.escalation_count} for hotel {hotel_id}")
+        logger.info(f"📊 Escalation #{self.escalation_count} recorded for hotel {hotel_id}")
 
     async def get_escalation_stats(self, hotel_id: Optional[str] = None) -> Dict[str, Any]:
         """Get escalation statistics."""
